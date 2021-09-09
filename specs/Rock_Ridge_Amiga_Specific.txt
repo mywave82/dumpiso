@@ -1,0 +1,271 @@
++-------------------------------------------------------------------------
+| $Id: Rock_Ridge_Amiga_Specific 2.4 1996/12/05 21:20:52 angela Exp $
++-------------------------------------------------------------------------
+
+Description of the "AS" System Use Entry
+
+The purpose of the "AS" System Use Entry is to record the complete set of
+file attributes defined for the Amiga operating system. This includes the
+protection flags plus an optional comment field. This System Use Entry is
+optional. If no "AS" System Use Entry is recorded in the System Use Area
+of a specific Directory Record, the defaults as described below shall be
+used.
+
+If more than one "AS" System Use Entry is recorded in the System Use
+Field of a single Directory Record, or any extension thereof, only the
+first such recorded "AS" Entry may contain Amiga Protection Bits. Any
+additional "AS" Entry recorded for that same single Directory Record
+shall have the PROTECTION bit of the Flags field set to ZERO.
+
+If more than one "AS" System Use Entry is recorded, only the first of
+them shall contain Amiga Protection Bits.
+
+The format of the "AS" System Use Entry is as follows:
+
+[1] "BP 1 to BP 2 - Signature Word" shall indicate that the System Use
+    Entry is a "AS" type System Use Entry. The bytes in this field shall
+    be (41)(53) ("AS").
+
+[2] "BP 3 - Length (LEN_AS)" shall specify as an 8-bit number the length
+    in bytes of the "AS" System Use Entry. The number in this field shall
+    be 5, plus 4 if the PROTECTION bit of the Flags field is set to ONE, 
+    plus LEN_COMMENT, if the COMMENT bit of the Flags field is set to ONE.
+    This field shall be recorded according to ISO 9660: 7.1.1.
+
+[3] "BP 4 - System Use Entry Version" shall specify as an 8-bit number an
+    identification of the version of the "AS" System Use Entry. The
+    number in this field shall be 1 for this version. This field shall be
+    recorded according to ISO 9660:7.1.1.
+
+[4] "BP 5 - Flags" shall contain bit field flags numbered 0 to 7 starting
+    with the least significant bit as follows:
+
+
+                      TABLE 1.  AS Flags
+
+    Position  Name        Value  Interpretation
+    --------  ----------  -----  --------------
+       0      PROTECTION   ONE   All of the 32 Protection Bits are
+                                 recorded.
+                           ZERO  None of the 32 Protection Bits are
+                                 recorded.
+       1      COMMENT      ONE   A comment field is recorded.
+                           ZERO  No comment field is recorded.
+       2      COMMENT      ONE   If a comment is recorded, this comment
+              CONTINUE           continues in next "AS" System Use Entry
+                                 of this System Use Area.
+                           ZERO  This is the last component of this
+                                 comment or no comment is recorded.
+      3-7     RESERVED     ZERO  Reserved for future use.
+
+
+[5] "BP 6 to LEN_AS - Amiga Extensions" shall be defined as follows:
+
+[6] If PROTECTION in the Flags field is set to ONE, then the first four
+    bytes of the Amiga Extension field shall contain Amiga protection
+    bits. All four bytes shall contain bit field flags numbered 0 to 7
+    starting with the least significant bit, with each bit representing
+    a valid Amiga file system attribute. The four bytes are recorded as
+    follows:
+
+
+                   FIGURE 1.  Amiga Protection Flags
+
+           BYTE 1    BYTE 2        BYTE 3            BYTE 4
+            User       0       Multiuser Flags   Protection Bits
+
+
+    Please note that BYTE 1 starts at an odd address relative to the "AS"
+    System Use Entry.
+
+    Applications that are reading the Protection Flags must preserve all
+    four bytes. No bit shall be cleared or set.
+
+
+[6a] "BYTE 1 - User Bitfields" are available to users and/or programmers
+     for their own purposes. Usually, they all should be set to ZERO.
+
+[6b] "BYTE 2 - Reserved Bitfields" is reserved for future use and will be
+     enhanced consistent with future modifications, if any, to the Amiga
+     protection bits set. Shall be set all to ZERO.
+
+[6c] "BYTE 3 - Multiuser Flags" shall contain the following Multiuser
+     Attribute Flags:
+
+
+           TABLE 2.  Amiga Multiuser Attribute Flags
+
+     Position  Character  Value  Interpretation
+     --------  ---------  -----  --------------
+       0           d       ONE   Object shall be deletable for group
+                                 members.
+                          ZERO   Object shall not be deletable for group
+                                 members.
+       1           e       ONE   Object shall be executable for group
+                                 members.
+                          ZERO   Object shall not be executable for group
+                                 members.
+       2           w       ONE   Object shall be writable for group
+                                 members.
+                          ZERO   Object shall not be writable for group
+                                 members.
+       3           r       ONE   Object shall be readable for group
+                                 members.
+                          ZERO   Object shall not be readable for group
+                                 members.
+       4           d       ONE   Object shall be deletable for other
+                                 users.
+                          ZERO   Object shall not be deletable for other
+                                 users.
+       5           e       ONE   Object shall be executable for other
+                                 users.
+                          ZERO   Object shall not be executable for other
+                                 users.
+       6           w       ONE   Object shall be writable for other
+                                 users.
+                          ZERO   Object shall not be writable for other
+                                 users.
+       7           r       ONE   Object shall be readable for other
+                                 users.
+                          ZERO   Object shall not be readable for other
+                                 users.
+
+
+[6d] "BYTE 4 - Protection Bits" shall contain the following Amiga
+     Attribute Flags:
+
+
+                TABLE 3.  Protection Bits
+
+     Position  Character  Value  Interpretation
+     --------  ---------  -----  --------------
+       0           d       ONE   Object shall not be deletable for owner.
+                          ZERO   Object shall be deletable for owner.
+       1           e       ONE   Object shall not be executable for owner.
+                          ZERO   Object shall be executable for owner.
+       2           w       ONE   Object shall not be writable for owner.
+                          ZERO   Object shall be writable for owner.
+       3           r       ONE   Object shall not be readable for owner.
+                          ZERO   Object shall be readable for owner.
+       4           a       ONE   Object is considered to be archived.
+                          ZERO   Object is not considered to be archived.
+                                 Usually should be set to ZERO.
+       5           p       ONE   Object is a reentrant executable.
+                          ZERO   Object is not a reentrant executable.
+       6           s       ONE   Object is an executable script file,
+                                 currently either ARexx or AmigaDOS.
+                                 Future modifications to the Amiga
+                                 scripting capabilities may allow other
+                                 use of this flag.
+                          ZERO   Object it not an executable script file.
+       7       RESERVED   ZERO   Reserved for future use.
+
+
+    Please note that the use of bits 0 to 3 is inverted compared to the
+    use of the other bits to match the AmigaOS use of the 32 Amiga bits
+    exactly.
+
+
+[7] If the COMMENT bit in the BP 5 is set to ONE, the following bytes
+    shall be interpreted as an Amiga Comment Extension.
+
+
+                FIGURE 2.  Amiga Comment Extension
+
+              BYTE 1         BYTE 2 to LEN_COMMENT
+           LEN_COMMENT              Comment
+
+
+[7a] "BYTE 1 - LEN_COMMENT" shall contain the byte length of this part of
+     the comment stored in this System Use Entry including the length
+     byte itself. This field shall be recorded according to
+     ISO 9660:7.1.1.
+
+[7b] "BYTE 2 to LEN_COMMENT - Comment" shall contain a comment string
+     providing descriptive information about the file system object
+     associated with this entry. There is no restriction on the content
+     of the comment, except that it shall not contain any (00) character,
+     though it is recommended that the comment is a displayable string.
+     The comment shall not be (00) terminated. The length of the recorded
+     comment shall be LEN_COMMENT-1.
+
+     If the COMMENT CONTINUE Flag in BP 5 is set, the comment shall
+     continue in the next "AS" System Use Field of this Direcory Record.
+     All comment parts (excluding the length byte) shall be concatenated
+     together, in the order in which they were recorded, until a COMMENT
+     CONTINUE flag with value ZERO is encountered, to obtain the entire
+     comment.
+
+[8] The following default values shall be assumed for all unrecorded
+    components of the "AS" field.
+
+    It is acceptable not to record protection bits in the "AS" entry if
+    the default mapping of the "PX" entry according to TABLE 6 will
+    result in the correct Amiga protection bit settings for the object.
+
+    An empty "AS" entry need not be recorded. Filesystems shall make use
+    of the required "PX" entry if no "AS" entry or no protection bits in
+    that entry are present for an object.
+
+
+                 TABLE 5.  Default values for "AS"
+
+      Description   Value
+      -----------   -----
+      PROTECTION    Defaults as described in table 6.
+      COMMENT       COMMENT_LEN set to (01).
+
+
+
+              TABLE 6.  Default Amiga Protection Bits
+
+    Byte Number   Bit Position    According "PX" bit or absolute value
+    -----------   ------------    ------------------------------------
+        1            0 to 7       ZERO
+
+        2            0 to 7       ZERO
+
+        3              0          S_IWGRP
+        3              1          S_IXGRP
+        3              2          S_IWGRP
+        3              3          S_IRGRP
+        3              4          S_IWOTH
+        3              5          S_IXOTH
+        3              6          S_IWOTH
+        3              7          S_IROTH
+
+        4              0          inverted S_IWUSR
+        4              1          inverted S_IXUSR
+        4              2          inverted S_IWUSR
+        4              3          inverted S_IRUSR
+        4              4          ZERO
+        4              5          ZERO
+        4              6          ZERO
+        4              7          ZERO
+
+
+    When generating the multiuser flags, please note that a user who
+    wants to make a backup on CD-ROM usually does not want his data being
+    world-accessable, while someone, who creates a commercial CD-ROM
+    usually wants a world-wide-accessable CD-ROM.
+
+
+                FIGURE 3.  "AS" System Use Entry
+
+       "A"     "S"    LEN_AS     1     FLAGS    AMIGA EXTENSIONS
+      (BP1)   (BP2)   (BP3)    (BP4)   (BP5)    (BP7 to LEN_AS)
+
+
+
+
+This document has been developed by Angela Schmidt 
+<Angela.Schmidt@stud.uni-karlsruhe.de>, with the help of Andrew Young
+<ayoung@mail.deltanet.com> (primary author of the Rock Ridge Interchange 
+Protocol and System Use Sharing Protocol), and is supported by Martin
+Berndt <m_berndt@wanderer.gun.de> (author of AmiCDFS), Oliver Kastl
+(author of CacheCDFS), Paul Reeves (author of AsimCDFS and MasterISO),
+Heinz Wrobel <heinz@hwg.muc.de> and Bernhard Möllemann
+<zza@mhystic.hall.sub.org>.
+
+For suggestions, please email Angela Schmidt
+<Angela.Schmidt@stud.uni-karlsruhe.de>.
