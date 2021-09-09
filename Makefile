@@ -4,10 +4,10 @@ CFLAGS=-g -Wall
 CCLDFLAGS=-g
 RM=rm
 
-all: dumpiso
+all: dumpiso dump_subchannel_rw
 
 clean:
-	$(RM) -f *.o dumpiso
+	$(RM) -f *.o dumpiso dump_subchannel_rw
 
 .PHONY: all clean
 
@@ -40,4 +40,10 @@ udf.o: udf.c \
 	$(CC) $(CFLAGS) $< -o $@ -c
 
 dumpiso: cdfs.o iso9660.o main.o udf.o
+	$(CCLD) $(CCLDFLAGS) $^ -o $@
+
+dump_subchannel_rw.o: dump_subchannel_rw.c
+	$(CC) $(CCFLAGS) $^ -o $@ -c
+
+dump_subchannel_rw: dump_subchannel_rw.o
 	$(CCLD) $(CCLDFLAGS) $^ -o $@
