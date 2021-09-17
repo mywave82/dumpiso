@@ -18,8 +18,12 @@ iconv_t UTF16BE_cd;
 
 int main(int argc, char *argv[])
 {
-	struct cdfs_datasource_t isofile;
-	struct cdfs_disc_t disc = {0};
+	uint32_t            isofile_sectorcount = 0;
+	int                 isofile_fd = -1;
+	//const char       *isofile_filename,
+	enum cdfs_format_t  isofile_format = 0;
+
+	struct cdfs_disc_t *disc = calloc (sizeof (*disc), 1);
 
 	struct stat st;
 
@@ -43,43 +47,44 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	isofile.sectoroffset = 0;
-	isofile.sectorcount = 0;
-	isofile.offset = 0;
-	isofile.filename = strdup (argv[1]);
-	isofile.fd = open (argv[1], O_RDONLY);
-	if (isofile.fd < 0)
+	isofile_fd = open (argv[1], O_RDONLY);
+
+	if (isofile_fd < 0)
 	{
 		perror ("open(argv[1]");
 		iconv_close (UTF16BE_cd);
 		return 1;
 	}
-	if (fstat (isofile.fd, &st))
+	if (fstat (isofile_fd, &st))
 	{
 		perror ("fstat(argv[1]");
-		close (isofile.fd);
-		free (isofile.filename);
+		close (isofile_fd);
 		iconv_close (UTF16BE_cd);
 		return 1;
 	}
 
-	if (detect_isofile_sectorformat (&isofile, st.st_size))
+	if (detect_isofile_sectorformat (isofile_fd, argv[1], st.st_size, &isofile_format, &isofile_sectorcount))
 	{
 		fprintf (stderr, "Unable to detect ISOFILE sector format\n");
-		close (isofile.fd);
-		free (isofile.filename);
+		close (isofile_fd);
 		iconv_close (UTF16BE_cd);
 		return 1;
 	}
 
-	disc.datasources_count = 1;
-	disc.datasources_data = &isofile;
+	cdfs_disc_append_datasource (disc,
+	                             0,                   /* sectoroffset */
+	                             isofile_sectorcount,
+	                             isofile_fd,
+	                             argv[1],             /* filename */
+	                             isofile_format,
+	                             0,                   /* offset */
+	                             st.st_size);         /* length */
 
 	while (!descriptorend)
 	{
 		uint32_t sector = 16 + descriptor;
 
-		if (get_absolute_sector_2048 (&disc, sector, buffer))
+		if (get_absolute_sector_2048 (disc, sector, buffer))
 		{
 			retval = 1;
 			break;
@@ -137,7 +142,7 @@ int main(int argc, char *argv[])
 		    (buffer[5] == '2'))
 		{
 			printf ("descriptor[%d] ISO/IEC 13346:1995 / ECMA 167 2nd edition / UDF Descriptor\n", descriptor);
-			UDF_Descriptor (&disc);
+			UDF_Descriptor (disc);
 			continue;
 		}
 
@@ -148,7 +153,7 @@ int main(int argc, char *argv[])
 		    (buffer[5] == '3'))
 		{
 			printf ("descriptor[%d] ECMA 167 3rd edition / UDF Descriptor\n", descriptor);
-			UDF_Descriptor (&disc);
+			UDF_Descriptor (disc);
 			continue;
 		}
 
@@ -164,7 +169,7 @@ int main(int argc, char *argv[])
 			{
 				printf ("WARNING - this is unepected, CD001 parsing should be complete\n");
 			}
-			ISO9660_Descriptor (&disc, buffer, sector, descriptor, &ISO9660descriptorend);
+			ISO9660_Descriptor (disc, buffer, sector, descriptor, &ISO9660descriptorend);
 			continue;
 		} else {
 			if (ISO9660descriptorend)
@@ -179,37 +184,36 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (disc.iso9660_session)
+	if (disc->iso9660_session)
 	{
-		if (disc.iso9660_session->Primary_Volume_Description)
+		if (disc->iso9660_session->Primary_Volume_Description)
 		{
 			printf ("ISO9660 vanilla\n");
-			DumpFS_dir_ISO9660 (disc.iso9660_session->Primary_Volume_Description, ".", disc.iso9660_session->Primary_Volume_Description->root_dirent.Absolute_Location);
+			DumpFS_dir_ISO9660 (disc->iso9660_session->Primary_Volume_Description, ".", disc->iso9660_session->Primary_Volume_Description->root_dirent.Absolute_Location);
 		}
-		if (disc.iso9660_session->Primary_Volume_Description && disc.iso9660_session->Primary_Volume_Description->RockRidge)
+		if (disc->iso9660_session->Primary_Volume_Description && disc->iso9660_session->Primary_Volume_Description->RockRidge)
 		{
 			printf ("ISO9660 RockRidge\n");
-			DumpFS_dir_RockRidge (disc.iso9660_session->Primary_Volume_Description, ".", disc.iso9660_session->Primary_Volume_Description->root_dirent.Absolute_Location);
+			DumpFS_dir_RockRidge (disc->iso9660_session->Primary_Volume_Description, ".", disc->iso9660_session->Primary_Volume_Description->root_dirent.Absolute_Location);
 		}
-		if (disc.iso9660_session->Supplementary_Volume_Description && disc.iso9660_session->Supplementary_Volume_Description->UTF16)
+		if (disc->iso9660_session->Supplementary_Volume_Description && disc->iso9660_session->Supplementary_Volume_Description->UTF16)
 		{
 			printf ("ISO9660 Joliet\n");
-			DumpFS_dir_Joliet (disc.iso9660_session->Supplementary_Volume_Description, ".", disc.iso9660_session->Supplementary_Volume_Description->root_dirent.Absolute_Location);
+			DumpFS_dir_Joliet (disc->iso9660_session->Supplementary_Volume_Description, ".", disc->iso9660_session->Supplementary_Volume_Description->root_dirent.Absolute_Location);
 		}
 
-		ISO9660_Session_Free (&disc.iso9660_session);
+		ISO9660_Session_Free (&disc->iso9660_session);
 	}
 
-	if (disc.udf_session)
+	if (disc->udf_session)
 	{
-		DumpFS_UDF (&disc);
-		UDF_Session_Free (&disc);
+		DumpFS_UDF (disc);
+		UDF_Session_Free (disc);
 	}
-
-	close (isofile.fd);
-	free (isofile.filename);
 
 	iconv_close (UTF16BE_cd);
+
+	cdfs_disc_free (disc);
 
 	return retval;
 }

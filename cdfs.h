@@ -157,7 +157,7 @@ struct cdfs_datasource_t
 	char *filename;        /* NULL for zero-fill */
 	enum cdfs_format_t format;
 	uint64_t offset;       /* given in bytes */
-	uint64_t filelength;   /* given in bytes */
+	uint64_t length;       /* given in bytes */
 };
 
 struct cdfs_track_t
@@ -165,6 +165,13 @@ struct cdfs_track_t
 	uint32_t pregap;
 	uint32_t start;
 	uint32_t length; /* including pregap */
+
+	char *title;
+	char *performer;
+	char *songwriter;
+	char *composer;
+	char *arranger;
+	char *message;
 };
 
 struct cdfs_disc_t
@@ -182,8 +189,30 @@ struct cdfs_disc_t
 	struct UDF_Session       *udf_session;
 };
 
+void cdfs_disc_append_datasource (struct cdfs_disc_t *disc,
+                                  uint32_t            sectoroffset,
+                                  uint32_t            sectorcount,
+                                  int                 fd,
+                                  const char         *filename,
+                                  enum cdfs_format_t  format,
+                                  uint64_t            offset,
+                                  uint64_t            length);
+
+void cdfs_disc_track_append (struct cdfs_disc_t *disc,
+                             uint32_t            pregap,
+                             uint32_t            offset,
+                             uint32_t            length,
+                             const char         *title,
+                             const char         *performer,
+                             const char         *songwriter,
+                             const char         *composer,
+                             const char         *arranger,
+                             const char         *message);
+
+void cdfs_disc_free (struct cdfs_disc_t *disc);
+
 int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buffer) /* 2048 byte modes */;
 
-int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_size);
+int detect_isofile_sectorformat (int isofile_fd, const char *filename, off_t st_size, enum cdfs_format_t *isofile_format, uint32_t *isofile_sectorcount);
 
 #endif
