@@ -12,9 +12,40 @@
 #include "cdfs.h"
 #include "iso9660.h"
 #include "main.h"
+#include "toc.h"
 #include "udf.h"
 
 iconv_t UTF16BE_cd;
+
+static char *get_path(const char *sourcefile)
+{
+	char *lastslash = strrchr (sourcefile, '/');
+	char *retval;
+	if (!lastslash)
+	{
+		return strdup ("./");
+	}
+	retval = strdup (sourcefile);
+	retval[lastslash - sourcefile + 1] = 0;
+	return retval;
+}
+
+static int is_filename_toc (const char *filename)
+{
+	int len = strlen (filename);
+	if (len < 4)
+	{
+		return 0;
+	}
+
+	if (!strcasecmp (filename + len - 4, ".toc"))
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -23,7 +54,7 @@ int main(int argc, char *argv[])
 	//const char       *isofile_filename,
 	enum cdfs_format_t  isofile_format = 0;
 
-	struct cdfs_disc_t *disc = calloc (sizeof (*disc), 1);
+	struct cdfs_disc_t *disc;
 
 	struct stat st;
 
@@ -42,7 +73,7 @@ int main(int argc, char *argv[])
 
 	if (argc != 2)
 	{
-		fprintf (stderr, "Usage:\n%s isofile\n", argv[0]);
+		fprintf (stderr, "Usage:\n%s <file.iso file.bin>\n%s <file.toc>\n", argv[0], argv[0]);
 		iconv_close (UTF16BE_cd);
 		return 1;
 	}
@@ -63,22 +94,48 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (detect_isofile_sectorformat (isofile_fd, argv[1], st.st_size, &isofile_format, &isofile_sectorcount))
+	if (is_filename_toc (argv[1]))
 	{
-		fprintf (stderr, "Unable to detect ISOFILE sector format\n");
-		close (isofile_fd);
-		iconv_close (UTF16BE_cd);
-		return 1;
-	}
+		struct toc_parser_t *toc = toc_parser_from_fd (isofile_fd);
+		char *argv1_path;
 
-	cdfs_disc_append_datasource (disc,
-	                             0,                   /* sectoroffset */
-	                             isofile_sectorcount,
-	                             isofile_fd,
-	                             argv[1],             /* filename */
-	                             isofile_format,
-	                             0,                   /* offset */
-	                             st.st_size);         /* length */
+		close (isofile_fd);
+		isofile_fd = -1;
+		if (!toc)
+		{
+			iconv_close (UTF16BE_cd);
+			return 1;
+		}
+
+		argv1_path = get_path (argv[1]);
+		disc = toc_parser_to_cdfs_disc (argv1_path, toc);
+		free (argv1_path);
+		toc_parser_free (toc);
+		if (!disc)
+		{
+			iconv_close (UTF16BE_cd);
+			return 1;
+		}
+	} else {
+		disc = calloc (sizeof (*disc), 1);
+
+		if (detect_isofile_sectorformat (isofile_fd, argv[1], st.st_size, &isofile_format, &isofile_sectorcount))
+		{
+			fprintf (stderr, "Unable to detect ISOFILE sector format\n");
+			close (isofile_fd);
+			iconv_close (UTF16BE_cd);
+			return 1;
+		}
+
+		cdfs_disc_append_datasource (disc,
+		                             0,                   /* sectoroffset */
+		                             isofile_sectorcount,
+		                             isofile_fd,
+		                             argv[1],             /* filename */
+		                             isofile_format,
+		                             0,                   /* offset */
+		                             st.st_size);         /* length */
+	}
 
 	while (!descriptorend)
 	{

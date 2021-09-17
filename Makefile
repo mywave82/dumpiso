@@ -30,7 +30,13 @@ main.o: main.c \
 	cdfs.h \
 	iso9660.h \
 	main.h \
+	toc.h \
 	udf.h
+	$(CC) $(CFLAGS) $< -o $@ -c
+
+toc.o: toc.c \
+	toc.h \
+	cdfs.h
 	$(CC) $(CFLAGS) $< -o $@ -c
 
 udf.o: udf.c \
@@ -39,7 +45,7 @@ udf.o: udf.c \
 	udf.h
 	$(CC) $(CFLAGS) $< -o $@ -c
 
-dumpiso: cdfs.o iso9660.o main.o udf.o
+dumpiso: cdfs.o iso9660.o main.o udf.o toc.o
 	$(CCLD) $(CCLDFLAGS) $^ -o $@
 
 dump_subchannel_rw.o: dump_subchannel_rw.c
