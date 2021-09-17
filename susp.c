@@ -214,7 +214,7 @@ static void decode_susp_CE (struct cdfs_disc_t *disc, struct Volume_Description_
 		return;
 	}
 
-	if (get_absolute_sector (disc, BlockLocation, newbuffer))
+	if (get_absolute_sector_2048 (disc, BlockLocation, newbuffer))
 	{
 		return;
 	}

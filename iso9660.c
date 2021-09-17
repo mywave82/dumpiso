@@ -1239,7 +1239,7 @@ static int Volume_Description_DeQueue (struct cdfs_disc_t *disc, struct Volume_D
 		uint8_t *b;
 		uint8_t buffer[2048];
 
-		if (get_absolute_sector (disc, targetdir->Location + o, buffer))
+		if (get_absolute_sector_2048 (disc, targetdir->Location + o, buffer))
 		{
 			break;
 		}
@@ -1436,7 +1436,7 @@ static struct Volume_Description_t *Primary_Volume_Descriptor (struct cdfs_disc_
 
 		for (ui = 0; ui < sectors; ui++)
 		{
-			if (get_absolute_sector (disc, path_table_l_loc + ui, path_table_buffer + ui * SECTORSIZE))
+			if (get_absolute_sector_2048 (disc, path_table_l_loc + ui, path_table_buffer + ui * SECTORSIZE))
 			{
 				printf ("  WARNING - Unable to fetch path_table_l\n");
 				break;
@@ -1450,7 +1450,7 @@ static struct Volume_Description_t *Primary_Volume_Descriptor (struct cdfs_disc_
 
 		for (ui = 0; ui < sectors; ui++)
 		{
-			if (get_absolute_sector (disc, path_table_m_loc + ui, path_table_buffer + ui * SECTORSIZE))
+			if (get_absolute_sector_2048 (disc, path_table_m_loc + ui, path_table_buffer + ui * SECTORSIZE))
 			{
 				printf ("  WARNING - Unable to fetch path_table_m\n");
 				break;

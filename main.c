@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	{
 		uint32_t sector = 16 + descriptor;
 
-		if (get_absolute_sector (&disc, sector, buffer))
+		if (get_absolute_sector_2048 (&disc, sector, buffer))
 		{
 			retval = 1;
 			break;

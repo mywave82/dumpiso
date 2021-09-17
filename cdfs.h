@@ -76,13 +76,75 @@ CD-I (Interactive) interleaves audio and data sectors
 
 enum cdfs_format_t
 {
-	FORMAT_RAW             = 0, /* AUDIO MODE1_RAW MODE1/2352 MODE2/2352 raw-files, CDA.. */
-	FORMAT_RAW_RW          = 1, /* same as above, but including R-W Subchannels, in theory there is cooked vs uncoooked */
-	FORMAT_RAW_XA          = 2, /* AUDIO MODE1_RAW MODE1/2352 MODE2/2352 raw-files, CDA..  For mode 2, it uses XA */
-	FORMAT_RAW_RW_XA       = 3, /* same as above, but including R-W Subchannels, in theory there is cooked vs uncoooked... For mode 2, it uses XA */
-//	FORMAT_RAW_MOTEROLA    = 4, /* Do 16bit endian swap on each word */
-	FORMAT_DATA_2048       = 5, /* MODE1/2048 MODE2/2048 */
-	FORMAT_XA1_DATA_2048   = 6, /* SUBHEADER prefixes 2048 bytes of data `mkisofs -sectype xa1`  */
+	/* Can be any encoding - but can be limited to:
+	 * Audio has 2352 bytes of audio samples
+	 * MODE1_RAW has bytes: 12 x SYNC, 4 x HEADER, 2048 x DATA, 4 x EDC, 8 x Reserved and 276 x ECC
+	 * MODE2_RAW has various encodings
+	 */
+	FORMAT_RAW___NONE                      =  0, /* autodection sometimes does not care... */
+	FORMAT_RAW___RW                        =  1, /* AUDIO MODE1_RAW MODE1/2352 MODE2/2352 raw-files, CDA.. */
+	FORMAT_RAW___RAW_RW                    =  2, /* AUDIO MODE1_RAW MODE1/2352 MODE2/2352 raw-files, CDA.. */
+	                                             // *.cue: TRACK CDG   (Karaoke CD+G (sector size: 2448))
+	FORMAT_AUDIO___NONE                    =  3, // *.toc: TRACK "file.bin" AUDIO
+	                                             // *.cue: TRACK AUDIO    (Audio (sector size: 2352))
+	FORMAT_AUDIO___RW                      =  4, // *.toc: TRACK "file.bin" AUDIO RW
+	FORMAT_AUDIO___RAW_RW                  =  5, // *.toc: TRACK "file.bin" AUDIO RAW_RW
+
+	FORMAT_AUDIO_SWAP___NONE               =  6, // *.toc: TRACK "file.bin" AUDIO SWAP
+	FORMAT_AUDIO_SWAP___RW                 =  7, // *.toc: TRACK "file.bin" AUDIO RW SWAP
+	FORMAT_AUDIO_SWAP___RAW_RW             =  8, // *.toc: TRACK "file.bin" AUDIO RAW_RW SWAP
+	FORMAT_MODE1_RAW___NONE                =  9, // *.toc: TRACK "file.bin" MODE1_RAW
+	                                             // *.cue: TRACK MODE1_RAW    (CD-ROM Mode 1 data (raw) (sector size: 2352), used by cdrdao)
+	                                             // *.cue: TRACK MODE1/2352    (CD-ROM Mode 1 data (raw) (sector size: 2352))
+	FORMAT_MODE1_RAW___RW                  = 10, // *.toc: TRACK "file.bin" MODE1_RAW RW
+	FORMAT_MODE1_RAW___RAW_RW              = 11, // *.toc: TRACK "file.bin" MODE1_RAW RAW_RW
+	FORMAT_MODE2_RAW___NONE                = 12, // *.toc: TRACK "file.bin" MODE2_RAW
+	                                             // *.cue: TRACK MODE2_RAW    (CD-ROM Mode 2 data (raw) (sector size: 2352), used by cdrdao)
+	                                             // *.cue: TRACK MODE2/2352    (CD-ROM Mode 2 data (raw) (sector size: 2352))
+	                                             // *.cue: TRACK CDI/2352    (CDI Mode 2 data)
+	FORMAT_MODE2_RAW___RW                  = 13, // *.toc: TRACK "file.bin" MODE2_RAW RW
+	FORMAT_MODE2_RAW___RAW_RW              = 14, // *.toc: TRACK "file.bin" MODE2_RAW RAW_RW
+	FORMAT_XA_MODE2_RAW                    = 15, /* TOC should indicate this.... */
+	FORMAT_XA_MODE2_RAW___RW               = 16, /* TOC should indicate this.... */
+	FORMAT_XA_MODE2_RAW___RAW_RW           = 17, /* TOC should indicate this.... */
+
+	/* All of these modes appears to the high-level API as the same - 2048 bytes of datasectors */
+	/* 2048 bytes */
+	FORMAT_MODE1___NONE                    = 18, // *.toc: TRACK "file.bin" MODE1
+	                                             // *.cue: TRACK MODE1/2048    (CD-ROM Mode 1 data (cooked) (sector size: 2048))
+	FORMAT_MODE1___RW                      = 19, // *.toc: TRACK "file.bin" MODE1 RW
+	FORMAT_MODE1___RAW_RW                  = 20, // *.toc: TRACK "file.bin" MODE1 RAW_RW
+	FORMAT_XA_MODE2_FORM1___NONE           = 21, // *.toc: TRACK "file.bin" MODE2_FORM1
+	                                             // *.cue: TRACK MODE2/2048    (CD-ROM Mode 2 XA form-1 data (sector size: 2048)
+	FORMAT_XA_MODE2_FORM1___RW             = 22, // *.toc: TRACK "file.bin" MODE2_FORM1 RW
+	FORMAT_XA_MODE2_FORM1___RAW_RW         = 23, // *.toc: TRACK "file.bin" MODE2_FORM1 RAW_RW
+	FORMAT_MODE_1__XA_MODE2_FORM1___NONE   = 24, // mkisofs and iso files in general
+	FORMAT_MODE_1__XA_MODE2_FORM1___RW     = 25,
+	FORMAT_MODE_1__XA_MODE2_FORM1___RAW_RW = 26,
+
+	/* 2336 bytes sector, known as MODE-2, used by AUDIO VIDEO/PICTURE-DATA */
+	FORMAT_MODE2___NONE                    = 27, // *.toc: TRACK "file.bin" MODE2
+	                                             // *.cue: TRACK MODE2/2336    (CD-ROM Mode 2 data (sector size: 2336))
+	                                             // *.cue: TRACK CDI/2336    (CDI Mode 2 data)
+	FORMAT_MODE2___RW                      = 28, // *.toc: TRACK "file.bin" MODE2 RW
+	FORMAT_MODE2___RAW_RW                  = 29, // *.toc: TRACK "file.bin" MODE2 RAW_RW
+
+	/* 2324 bytes sector, known as MODE-2 FORM-2, used by compressed AUDIO VIDEO/PICTURE-DATA */
+	FORMAT_XA_MODE2_FORM2___NONE           = 30, // *.toc: TRACK "file.bin" MODE2_FORM2
+	                                             // *.toc: TRACK MODE2/2324    (CD-ROM Mode 2 XA form-2 data (sector size: 2324))
+	FORMAT_XA_MODE2_FORM2___RW             = 31, // *.toc: TRACK "file.bin" MODE2_FORM2 RW
+	FORMAT_XA_MODE2_FORM2___RAW_RW         = 32, // *.toc: TRACK "file.bin" MODE2_FORM2 RAW_RW
+
+	/* 4 bytes header + 8 bytes of subheader and either MODE2-FORM-1 + padding or MODE2-FORM-2 data */
+	FORMAT_XA_MODE2_FORM_MIX___NONE        = 33, // *.toc: TRACK "file.bin" MODE2_FORM_MIX
+	FORMAT_XA_MODE2_FORM_MIX___RW          = 34, // *.toc: TRACK "file.bin" MODE2_FORM_MIX RW
+	FORMAT_XA_MODE2_FORM_MIX___RAW_RW      = 35, // *.toc: TRACK "file.bin" MODE2_FORM_MIX RAW_RW
+
+	/* 8 bytes SUBHEADER + 2048 bytes of MODE2_FORM1 2048 bytes of datae */
+	/* 2056 bytes */
+	FORMAT_XA1_MODE2_FORM1___NONE          = 250, // mkisofs -sectype xa1
+	FORMAT_XA1_MODE2_FORM1___RW            = 251, // mkisofs -sectype xa1
+	FORMAT_XA1_MODE2_FORM1___RW_RAW        = 252, // mkisofs -sectype xa1
 
 	FORMAT_ERROR           = 255,
 };
@@ -92,15 +154,26 @@ struct cdfs_datasource_t
 	uint32_t sectoroffset; /* offset into disc */
 	uint32_t sectorcount;  /* number of sectors */
 	int fd;
-	char *filename;
+	char *filename;        /* NULL for zero-fill */
 	enum cdfs_format_t format;
-	uint32_t offset;
+	uint64_t offset;       /* given in bytes */
+	uint64_t filelength;   /* given in bytes */
+};
+
+struct cdfs_track_t
+{	/* all units given in CD sectors */
+	uint32_t pregap;
+	uint32_t start;
+	uint32_t length; /* including pregap */
 };
 
 struct cdfs_disc_t
 {
 	int                       datasources_count; /* these are normally bound to a session, but easier to have them listed here */
 	struct cdfs_datasource_t *datasources_data;
+
+	int                       tracks_count;
+	struct cdfs_track_t       tracks_data[100]; /* track 0 is for global text-info only */
 
 	/* can in theory be multiple sessions.... */
 	struct ISO9660_session_t *iso9660_session;
@@ -109,7 +182,7 @@ struct cdfs_disc_t
 	struct UDF_Session       *udf_session;
 };
 
-int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buffer) /* 2048 byte modes */;
+int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buffer) /* 2048 byte modes */;
 
 int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_size);
 

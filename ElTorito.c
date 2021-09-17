@@ -235,7 +235,7 @@ static int ElTorito_check_offset (struct cdfs_disc_t *disc, uint32_t *sector, ui
 		*sector = (*sector) + 1;
 		*offset = 0;
 
-		if (get_absolute_sector (disc, *sector, buffer))
+		if (get_absolute_sector_2048 (disc, *sector, buffer))
 		{
 			printf ("\n Failed to fetch next El Torito boot description at absolute sector%"PRId32"\n", *sector);
 			return -1;
@@ -254,7 +254,7 @@ static void ElTorito_abs_sector (struct cdfs_disc_t *disc, uint32_t sector)
 	int offset = 0;
 	int lastheader = 0;
 
-	if (get_absolute_sector (disc, sector, buffer))
+	if (get_absolute_sector_2048 (disc, sector, buffer))
 	{
 		printf ("Failed to fetch El Torito boot description at absolute sector%"PRId32"\n", sector);
 		return;

@@ -15,7 +15,7 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 {
 	uint8_t buffer[6+8+4+12];
 
-	/* Detect FORMAT_DATA_2048 */
+	/* Detect MODE1 / XA_MODE2_FORM1 - 2048 bytes of data */
 	if (lseek (isofile->fd, SECTORSIZE * 16, SEEK_SET) == (off_t)-1)
 	{
 		perror ("lseek(argv[1]) #1");
@@ -38,12 +38,12 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 	     (buffer[5] == '1')))
 	{
 		printf ("%s: detected as ISO file format, containing only data as is\n", isofile->filename);
-		isofile->format = FORMAT_DATA_2048;
+		isofile->format = FORMAT_MODE_1__XA_MODE2_FORM1___NONE;
 		isofile->sectorcount = st_size / 2048;
 		return 0;
 	}
 
-	/* Detect FORMAT_XA1_DATA_2048 */
+	/* Detect FORMAT_XA1_MODE2_FORM1___NONE */
 	if (lseek (isofile->fd, (SECTORSIZE + 8) * 16, SEEK_SET) == (off_t)-1)
 	{
 		perror ("lseek(argv[1]) #2");
@@ -68,12 +68,12 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 	      (buffer[8+5] == '1'))))
 	{
 		printf ("%s: detected as ISO file format, each sector prefixed with XA1 header (8 bytes)\n", isofile->filename);
-		isofile->format = FORMAT_XA1_DATA_2048;
+		isofile->format = FORMAT_XA1_MODE2_FORM1___NONE;
 		isofile->sectorcount = st_size / (2048 + 8);
 		return 0;
 	}
 
-	/* Detect FORMAT_RAW  MODE-1 / MODE-2 FORM-1*/
+	/* Detect FORMAT_RAW___NONE MODE-1 / MODE-2 FORM-1*/
 	if (lseek (isofile->fd, (SECTORSIZE_XA2) * 16, SEEK_SET) == (off_t)-1)
 	{
 		perror ("lseek(argv[1]) #3");
@@ -111,7 +111,7 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 			     (buffer[12+4+5] =='1')))
 			{
 				printf ("%s: detected as ISO file format, each sector prefixed with SYNC and MODE 1 header\n", isofile->filename);
-				isofile->format = FORMAT_RAW;
+				isofile->format = FORMAT_MODE1_RAW___NONE;
 				isofile->sectorcount = st_size / (SECTORSIZE_XA2);
 				return 0;
 			}
@@ -130,7 +130,7 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 			      (buffer[12+4+5] == '1')))
 			{
 				printf ("%s: detected as ISO file format, each sector prefixed with SYNC and MODE 2\n", isofile->filename);
-				isofile->format = FORMAT_RAW;
+				isofile->format = FORMAT_MODE2_RAW___NONE;
 				isofile->sectorcount = st_size / (SECTORSIZE_XA2);
 				return 0;
 			}
@@ -149,14 +149,14 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 			      (buffer[12+4+8+5] == '1'))))
 			{
 				printf ("%s: detected as ISO file format, each sector prefixed with SYNC and MODE 2 FORM 1 header\n", isofile->filename);
-				isofile->format = FORMAT_RAW_XA;
+				isofile->format = FORMAT_XA_MODE2_RAW;
 				isofile->sectorcount = st_size / (SECTORSIZE_XA2);
 				return 0;
 			}
 		}
 	}
 
-	/* Detect FORMAT_RAW_RW */
+	/* Detect FORMAT_RAW___RAW_RW / FORMAT_RAW___RW */
 	if (lseek (isofile->fd, (SECTORSIZE_XA2 + 96) * 16, SEEK_SET) == (off_t)-1)
 	{
 		perror ("lseek(argv[1]) #5");
@@ -194,7 +194,7 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 			     (buffer[12+4+5] == '1')))
 			{
 				printf ("%s: detected as ISO file format, each sector prefixed with SYNC and MODE 1 header, and suffixed with SUBCHANNEL R-W\n", isofile->filename);
-				isofile->format = FORMAT_RAW_RW;
+				isofile->format = FORMAT_MODE1_RAW___RAW_RW;
 				isofile->sectorcount = st_size / (SECTORSIZE_XA2 + 96);
 				return 0;
 			}
@@ -213,7 +213,7 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 			      (buffer[12+4+5] == '1')))
 			{
 				printf ("%s: detected as ISO file format, each sector prefixed with SYNC and MODE 2, and suffixed with SUBCHANNEL R-W\n", isofile->filename);
-				isofile->format = FORMAT_RAW_RW;
+				isofile->format = FORMAT_MODE2_RAW___RAW_RW;
 				isofile->sectorcount = st_size / (SECTORSIZE_XA2);
 				return 0;
 			}
@@ -232,7 +232,7 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 			      (buffer[12+4+8+5] == '1'))))
 			{
 				printf ("%s: detected as ISO file format, each sector prefixed with SYNC and MODE 2 FORM 1 header, and suffixed with SUBCHANNEL R-W\n", isofile->filename);
-				isofile->format = FORMAT_RAW_RW_XA;
+				isofile->format = FORMAT_XA_MODE2_RAW___RAW_RW;
 				isofile->sectorcount = st_size / (SECTORSIZE_XA2 + 96);
 				return 0;
 			}
@@ -243,10 +243,11 @@ int detect_isofile_sectorformat (struct cdfs_datasource_t *isofile, off_t st_siz
 }
 
 
-int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buffer) /* 2048 byte modes */
+int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buffer) /* 2048 byte modes */
 {
 	int i;
 	uint8_t xbuffer[16];
+	int subchannel = 0;
 
 	for (i=0; i < disc->datasources_count; i++)
 	{
@@ -255,11 +256,29 @@ int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buf
 		{
 			switch (disc->datasources_data[i].format)
 			{
-				case FORMAT_RAW:
-				case FORMAT_RAW_XA:
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*SECTORSIZE_XA2, SEEK_SET) == (off_t)-1)
+				case FORMAT_AUDIO_SWAP___RAW_RW:
+				case FORMAT_AUDIO_SWAP___RW:
+				case FORMAT_AUDIO___RAW_RW: /* we do not swap endian on 2048 byte fetches */
+				case FORMAT_AUDIO___RW: /* we do not swap endian on 2048 byte fetches */
+				case FORMAT_MODE1_RAW___RAW_RW:
+				case FORMAT_MODE1_RAW___RW:
+				case FORMAT_MODE2_RAW___RAW_RW:
+				case FORMAT_MODE2_RAW___RW:
+				case FORMAT_XA_MODE2_RAW___RAW_RW:
+				case FORMAT_XA_MODE2_RAW___RW:
+				case FORMAT_RAW___RAW_RW:
+				case FORMAT_RAW___RW:
+					subchannel = 96;
+					/* fall-through */
+				case FORMAT_RAW___NONE:
+				case FORMAT_AUDIO___NONE:
+				case FORMAT_AUDIO_SWAP___NONE: /* we do not swap endian on 2048 byte fetches */
+				case FORMAT_MODE1_RAW___NONE:
+				case FORMAT_MODE2_RAW___NONE:
+				case FORMAT_XA_MODE2_RAW:
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE_XA2 + subchannel), SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*SECTORSIZE_XA2, SEEK_SET) failed\n", sector);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*%d, SEEK_SET) failed\n", sector, SECTORSIZE_XA2 + subchannel);
 						return -1;
 					}
 
@@ -286,9 +305,10 @@ int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buf
 								return -1;
 							}
 							return 0;
-						case 0xe2: /* Seems to be second to last sector on CD-R */
-						case 0x02: /* MODE 2: assuming XA-FORM 1 */
-							// Ignore the sub-header, for now */
+						case 0xe2: /* Seems to be second to last sector on CD-R, mode-2 */
+						case 0x02: /* MODE 2*/
+							/* assuming XA-FORM-1, that is the only mode2 that can provide 2048 bytes of data */
+#warning ignoring sub-header in FORMAT_XA_MODE2_RAW for now..
 							if (read (disc->datasources_data[i].fd, xbuffer, 8) != 8)
 							{
 								fprintf (stderr, "read(fd, xbuffer_subheader, 8) failed\n");
@@ -305,61 +325,27 @@ int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buf
 							return -1;
 					}
 					return -1; /* not reachable */
-				case FORMAT_RAW_RW:
-				case FORMAT_RAW_RW_XA:
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE_XA2+96), SEEK_SET) == (off_t)-1)
+
+				case FORMAT_XA_MODE2_FORM_MIX___RAW_RW: /* not tested */
+				case FORMAT_XA_MODE2_FORM_MIX___RW: /* not tested */
+					subchannel = 96;
+					/* fall-through */
+				case FORMAT_XA_MODE2_FORM_MIX___NONE: /* not tested */
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(2324 + 8 + subchannel), SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*(SECTORSIZE_XA2+96), SEEK_SET) failed\n", sector);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*(%d), SEEK_SET) failed\n", sector, 2324 + 8 + subchannel);
 						return -1;
 					}
 
-					if (read (disc->datasources_data[i].fd, xbuffer, 16) != 16)
+					if (read (disc->datasources_data[i].fd, xbuffer, 8) != 8)
 					{
 						fprintf (stderr, "read(fd, xbuffer, 16) failed\n");
 						return -1;
 					}
-					if (memcmp (xbuffer, "\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00", 12))
+#warning ignoring sub-header in FORMAT_XA_MODE2_FORM_MIX for now..
+					if (read (disc->datasources_data[i].fd, xbuffer, 8) != 8)
 					{
-						fprintf (stderr, "Invalid sync in sector %"PRId32"\n", sector);
-						return -1;
-					}
-					// xbuffer[12, 13 and 14] should be the current sector adress
-					switch (xbuffer[15])
-					{
-						case 0x00: /* CLEAR */
-							fprintf (stderr, "Sector %"PRId32" is CLEAR\n", sector);
-							return -1;
-						case 0x01: /* MODE 1: DATA */
-							if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
-							{
-								fprintf (stderr, "read(fd, buffer, SECTORSIZE) failed\n");
-								return -1;
-							}
-							return 0;
-						case 0xe2: /* Seems to be second to last sector on CD-R */
-						case 0x02: /* MODE 2: assuming XA-FORM 1 */
-						// Ignore the sub-header, for now */
-							if (read (disc->datasources_data[i].fd, xbuffer, 8) != 8)
-							{
-								fprintf (stderr, "read(fd, xbuffer_subheader, 8) failed\n");
-								return -1;
-							}
-							if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
-							{
-								fprintf (stderr, "read(fd, buffer, SECTORSIZE) failed\n");
-								return -1;
-							}
-							return 0;
-						default:
-							fprintf (stderr, "Sector %"PRId32" is of unknown type (0x%02x)\n", sector, xbuffer[15]);
-							return -1;
-					}
-					return -1; /* not reachable */
-
-				case FORMAT_DATA_2048:
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*SECTORSIZE, SEEK_SET) == (off_t)-1)
-					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*SECTORSIZE, SEEK_SET) failed\n", sector);
+						fprintf (stderr, "read(fd, xbuffer_subheader, 8) failed\n");
 						return -1;
 					}
 					if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
@@ -368,11 +354,40 @@ int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buf
 						return -1;
 					}
 					return 0;
-				case FORMAT_XA1_DATA_2048:
+
+				case FORMAT_MODE1___NONE:
+				case FORMAT_XA_MODE2_FORM1___NONE:
+				case FORMAT_MODE_1__XA_MODE2_FORM1___NONE:
+					subchannel = 96;
+					/* fall-through */
+				case FORMAT_MODE1___RAW_RW:
+				case FORMAT_MODE1___RW:
+				case FORMAT_XA_MODE2_FORM1___RAW_RW:
+				case FORMAT_XA_MODE2_FORM1___RW:
+				case FORMAT_MODE_1__XA_MODE2_FORM1___RAW_RW:
+				case FORMAT_MODE_1__XA_MODE2_FORM1___RW:
+
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE + subchannel), SEEK_SET) == (off_t)-1)
+					{
+						fprintf (stderr, "fseek(fd, (%"PRId32")*%d, SEEK_SET) failed\n", sector, SECTORSIZE + subchannel);
+						return -1;
+					}
+					if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
+					{
+						fprintf (stderr, "read(fd, buffer, SECTORSIZE) failed\n");
+						return -1;
+					}
+					return 0;
+
+				case FORMAT_XA1_MODE2_FORM1___RW:
+				case FORMAT_XA1_MODE2_FORM1___RW_RAW:
+					subchannel = 96;
+					/* fall-through */
+				case FORMAT_XA1_MODE2_FORM1___NONE:
 					// Ignore the sub-header, for now */
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE+8) + 8, SEEK_SET) == (off_t)-1)
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE + 8 + subchannel) + 8, SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*(SECTORSIZE + 8) + 8, SEEK_SET) failed\n", sector);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*%d + 8, SEEK_SET) failed\n", sector, SECTORSIZE + 8 + subchannel);
 						return -1;
 					}
 					if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
@@ -381,8 +396,21 @@ int get_absolute_sector (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buf
 						return -1;
 					}
 					return 0;
+
+				case FORMAT_MODE2___NONE:
+				case FORMAT_MODE2___RAW_RW:
+				case FORMAT_MODE2___RW:
+					fprintf (stderr, "Sector %"PRIu32" does not contain 2048 bytes of data, but 2336\n", sector);
+					return 1;
+
+				case FORMAT_XA_MODE2_FORM2___NONE:
+				case FORMAT_XA_MODE2_FORM2___RAW_RW:
+				case FORMAT_XA_MODE2_FORM2___RW:
+					fprintf (stderr, "Sector %"PRIu32" does not contain 2048 bytes of data, but 2324\n", sector);
+					return 1;
+
 				default:
-					fprintf (stderr, "Unable to fetch absolute sector %" PRId32 "\n", sector);
+					fprintf (stderr, "Unable to fetch absolute sector %" PRIu32 "\n", sector);
 					return 1;
 			}
 		}

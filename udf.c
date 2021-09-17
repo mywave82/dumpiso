@@ -3834,7 +3834,7 @@ static int UDF_CompleteDiskIO_Initialize (struct cdfs_disc_t *disc, struct UDF_P
 }
 static int UDF_CompleteDiskIO_FetchSector (struct cdfs_disc_t *disc, struct UDF_Partition_Common *self, uint8_t *buffer, uint32_t sector)
 {
-	return get_absolute_sector (disc, sector, buffer);
+	return get_absolute_sector_2048 (disc, sector, buffer);
 }
 
 static void UDF_CompleteDiskIO_Free (void *self)
@@ -3888,7 +3888,7 @@ void UDF_Descriptor (struct cdfs_disc_t *disc)
 			SearchHalf = ((SearchEnd - SearchBegin) >> 1) + SearchBegin;
 
 			printf ("UDF_Descriptor iteration %d, SearchBegin=%"PRId32" SearchEnd=%"PRId32" SearchHalf=%"PRId32" FetchLength=%"PRId32"\n", iteration, SearchBegin, SearchEnd, SearchHalf, FetchLength);
-			if (get_absolute_sector (disc, SearchHalf, buffer))
+			if (get_absolute_sector_2048 (disc, SearchHalf, buffer))
 			{
 				printf (" FetchSector %" PRIu32 " failed\n", SearchHalf);
 				SearchEnd = SearchHalf - 1;
@@ -3899,14 +3899,14 @@ void UDF_Descriptor (struct cdfs_disc_t *disc)
 		printf ("SearchEnd=%" PRId32 "\n", SearchEnd);
 		if (SearchEnd > 256)
 		{
-			if (get_absolute_sector (disc, SearchEnd - 1, buffer))
+			if (get_absolute_sector_2048 (disc, SearchEnd - 1, buffer))
 			{
 				printf ("Failed to fetch sector N");
 			} else {
 				invalid_N = AnchorVolumeDescriptorPointer (n, buffer, SearchEnd - 1, &MainVolumeDescriptorSequenceExtent_N, &ReserveVolumeDescriptorSequenceExtent_N);
 			}
 
-			if (get_absolute_sector (disc, SearchEnd - 256, buffer))
+			if (get_absolute_sector_2048 (disc, SearchEnd - 256, buffer))
 			{
 				printf ("Failed to fetch sector N-256");
 			} else {
@@ -3916,7 +3916,7 @@ void UDF_Descriptor (struct cdfs_disc_t *disc)
 	}
 
 	/* Anchor Volume Descriptor Pointer is always located at sector 256 in the given session */
-	if (get_absolute_sector (disc, 256, buffer))
+	if (get_absolute_sector_2048 (disc, 256, buffer))
 	{
 		return;
 	}
@@ -4086,7 +4086,7 @@ static void SequenceRawdisk (int n, struct cdfs_disc_t *disc, struct UDF_extent_
 
 	while (left)
 	{
-		if (get_absolute_sector (disc, L->ExtentLocation + pos, buffer + pos * SECTORSIZE))
+		if (get_absolute_sector_2048 (disc, L->ExtentLocation + pos, buffer + pos * SECTORSIZE))
 		{
 			N(n); fprintf (stderr, "Warning - Failed to fetch sector\n");
 			break;
@@ -4169,7 +4169,7 @@ static int PhysicalPartitionInitialize (struct cdfs_disc_t *disc, struct UDF_Par
 static int PhysicalPartitionFetchSector (struct cdfs_disc_t *disc, struct UDF_Partition_Common *self, uint8_t *buffer, uint32_t sector)
 {
 	struct UDF_PhysicalPartition_t *_self = (struct UDF_PhysicalPartition_t *)self;
-	return get_absolute_sector (disc, sector + _self->Start, buffer);
+	return get_absolute_sector_2048 (disc, sector + _self->Start, buffer);
 }
 
 static void UDF_Session_Add_PhysicalPartition (struct cdfs_disc_t *disc, uint32_t VolumeDescriptorSequenceNumber, uint16_t PartitionNumber, enum PhysicalPartition_Content Content, uint32_t SectorSize, uint32_t Start, uint32_t Length)
@@ -5247,7 +5247,7 @@ static void UDF_Load_SparingTable (int n, struct cdfs_disc_t *disc, struct UDF_L
 		This logic was wrong. Location is given in disk absolute, not partition we manage
 		if (t->PhysicalPartition->PartitionCommon.FetchSector (disc, &t->PhysicalPartition->PartitionCommon, buffer + i * SECTORSIZE, Location + i))
 #else
-		if (get_absolute_sector (disc, Location + i, buffer + i * SECTORSIZE))
+		if (get_absolute_sector_2048 (disc, Location + i, buffer + i * SECTORSIZE))
 #endif
 		{
 			free (buffer);
