@@ -135,6 +135,30 @@ int main(int argc, char *argv[])
 		                             isofile_format,
 		                             0,                   /* offset */
 		                             st.st_size);         /* length */
+
+		/* track 00 */
+		cdfs_disc_track_append (disc,
+		                        0,  /* pregap */
+		                        0,  /* offset */
+		                        0,  /* sectorcount */
+		                        0,  /* title */
+		                        0,  /* performer */
+		                        0,  /* songwriter */
+		                        0,  /* composer */
+		                        0,  /* arranger */
+		                        0); /* message */
+
+		/* track 01 */
+		cdfs_disc_track_append (disc,
+		                        0,  /* pregap */
+		                        0,  /* offset */
+		                        disc->datasources_data[0].sectorcount,
+		                        0,  /* title */
+		                        0,  /* performer */
+		                        0,  /* songwriter */
+		                        0,  /* composer */
+		                        0,  /* arranger */
+		                        0); /* message */
 	}
 
 	while (!descriptorend)

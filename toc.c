@@ -617,7 +617,7 @@ static int toc_parse_token (struct toc_parser_t *toc_parser, enum TOC_tokens tok
 				toc_parser_modify_offset (toc_parser, src);
 				return 0;
 			case TOC_TOKEN_msf:
-				toc_parser_modify_pregap (toc_parser, (src[0]-'0') * 75*60*10 +
+				toc_parser_modify_length (toc_parser, (src[0]-'0') * 75*60*10 +
 			                                              (src[1]-'0') * 75*60    +
 			                                              (src[3]-'0') * 75   *10 +
 			                                              (src[4]-'0') * 75       +
