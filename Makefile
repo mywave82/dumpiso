@@ -36,7 +36,8 @@ main.o: main.c \
 
 toc.o: toc.c \
 	toc.h \
-	cdfs.h
+	cdfs.h \
+	wave.h
 	$(CC) $(CFLAGS) $< -o $@ -c
 
 udf.o: udf.c \
@@ -45,7 +46,11 @@ udf.o: udf.c \
 	udf.h
 	$(CC) $(CFLAGS) $< -o $@ -c
 
-dumpiso: cdfs.o iso9660.o main.o udf.o toc.o
+wave.o: wave.c \
+	wave.h
+	$(CC) $(CFLAGS) $< -o $@ -c
+
+dumpiso: cdfs.o iso9660.o main.o udf.o toc.o wave.o
 	$(CCLD) $(CCLDFLAGS) $^ -o $@
 
 dump_subchannel_rw.o: dump_subchannel_rw.c

@@ -11,6 +11,7 @@
 
 #include "cdfs.h"
 #include "toc.h"
+#include "wave.h"
 
 enum TOC_tokens
 {
@@ -117,7 +118,7 @@ enum TOC_parser_state
 	TOC_PARSER_STATE_index,          /* waiting for msf */
 };
 
-enum storage_mode_t
+enum toc_storage_mode_t
 {
 	AUDIO = 0,
 	MODE1,
@@ -129,14 +130,14 @@ enum storage_mode_t
 	MODE2_RAW
 };
 
-enum storage_mode_subchannel_t
+enum toc_storage_mode_subchannel_t
 {
 	NONE = 0,
 	SUBCHANNEL_RW,
 	SUBCHANNEL_RW_RAW,
 };
 
-static enum cdfs_format_t toc_storage_mode_to_cdfs_format (enum storage_mode_t mode, enum storage_mode_subchannel_t subchannel, int swap)
+static enum cdfs_format_t toc_storage_mode_to_cdfs_format (enum toc_storage_mode_t mode, enum toc_storage_mode_subchannel_t subchannel, int swap)
 {
 	enum cdfs_format_t retval = 0;
 	switch (mode)
@@ -159,7 +160,7 @@ static enum cdfs_format_t toc_storage_mode_to_cdfs_format (enum storage_mode_t m
 	return retval;
 }
 
-static int medium_sector_size (enum storage_mode_t mode, enum storage_mode_subchannel_t subchannel)
+static int medium_sector_size (enum toc_storage_mode_t mode, enum toc_storage_mode_subchannel_t subchannel)
 {
 	int retval = 0;
 	switch (mode)
@@ -196,8 +197,8 @@ struct toc_parser_datasource_t
 
 struct toc_parser_track_t
 {
-	enum storage_mode_t            storage_mode;
-	enum storage_mode_subchannel_t storage_mode_subchannel;
+	enum toc_storage_mode_t            storage_mode;
+	enum toc_storage_mode_subchannel_t storage_mode_subchannel;
 
 	char *title;
 	char *performer;
@@ -226,44 +227,44 @@ struct toc_parser_t
 	enum TOC_parser_state state;
 	char **parser_destination;
 	int track;
-	struct toc_parser_track_t trackdata[100]; /* track 0 is global-common info */
+	struct toc_parser_track_t track_data[100]; /* track 0 is global-common info */
 };
 
 static int toc_parser_append_source (struct toc_parser_t *toc_parser, const char *src)
 {
-	void *temp = realloc (toc_parser->trackdata[toc_parser->track].datasource, sizeof (toc_parser->trackdata[toc_parser->track].datasource[0]) * (toc_parser->trackdata[toc_parser->track].datasourceN + 1));
+	void *temp = realloc (toc_parser->track_data[toc_parser->track].datasource, sizeof (toc_parser->track_data[toc_parser->track].datasource[0]) * (toc_parser->track_data[toc_parser->track].datasourceN + 1));
 	if (!temp)
 	{
 		return -1;
 	}
-	toc_parser->trackdata[toc_parser->track].datasource = temp;
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN].filename = src ? strdup(src) : 0;
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN].length = -1;
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN].offset = 0;
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN].swap = 0;
-	toc_parser->trackdata[toc_parser->track].datasourceN++;
+	toc_parser->track_data[toc_parser->track].datasource = temp;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN].filename = src ? strdup(src) : 0;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN].length = -1;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN].offset = 0;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN].swap = 0;
+	toc_parser->track_data[toc_parser->track].datasourceN++;
 	return 0;
 }
 
 static void toc_parser_modify_length (struct toc_parser_t *toc_parser, const int64_t length)
 {
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN - 1].length = length;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN - 1].length = length;
 }
 
 static void toc_parser_modify_offset (struct toc_parser_t *toc_parser, const char *src)
 {
 	unsigned long long length = strtoull (src + 1, 0, 10);
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN - 1].offset = length;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN - 1].offset = length;
 }
 
 static void toc_parser_modify_SWAP (struct toc_parser_t *toc_parser)
 {
-	toc_parser->trackdata[toc_parser->track].datasource[toc_parser->trackdata[toc_parser->track].datasourceN - 1].swap = 1;
+	toc_parser->track_data[toc_parser->track].datasource[toc_parser->track_data[toc_parser->track].datasourceN - 1].swap = 1;
 }
 
 static void toc_parser_modify_pregap (struct toc_parser_t *toc_parser, const int length)
 {
-	toc_parser->trackdata[toc_parser->track].pregap = length;
+	toc_parser->track_data[toc_parser->track].pregap = length;
 }
 
 static void toc_parser_append_index (struct toc_parser_t *toc_parser, const int length)
@@ -394,27 +395,27 @@ static int toc_parse_token (struct toc_parser_t *toc_parser, enum TOC_tokens tok
 				toc_parser->state = TOC_PARSER_STATE_cd_text_1;
 				return 0;
 			case TOC_TOKEN_TITLE:
-				toc_parser->parser_destination = &toc_parser->trackdata[toc_parser->track].title;
+				toc_parser->parser_destination = &toc_parser->track_data[toc_parser->track].title;
 				toc_parser->state = TOC_PARSER_STATE_language_3;
 				return 0;
 			case TOC_TOKEN_PERFORMER:
-				toc_parser->parser_destination = &toc_parser->trackdata[toc_parser->track].performer;
+				toc_parser->parser_destination = &toc_parser->track_data[toc_parser->track].performer;
 				toc_parser->state = TOC_PARSER_STATE_language_3;
 				return 0;
 			case TOC_TOKEN_SONGWRITER:
-				toc_parser->parser_destination = &toc_parser->trackdata[toc_parser->track].songwriter;
+				toc_parser->parser_destination = &toc_parser->track_data[toc_parser->track].songwriter;
 				toc_parser->state = TOC_PARSER_STATE_language_3;
 				return 0;
 			case TOC_TOKEN_COMPOSER:
-				toc_parser->parser_destination = &toc_parser->trackdata[toc_parser->track].composer;
+				toc_parser->parser_destination = &toc_parser->track_data[toc_parser->track].composer;
 				toc_parser->state = TOC_PARSER_STATE_language_3;
 				return 0;
 			case TOC_TOKEN_ARRANGER:
-				toc_parser->parser_destination = &toc_parser->trackdata[toc_parser->track].arranger;
+				toc_parser->parser_destination = &toc_parser->track_data[toc_parser->track].arranger;
 				toc_parser->state = TOC_PARSER_STATE_language_3;
 				return 0;
 			case TOC_TOKEN_MESSAGE:
-				toc_parser->parser_destination = &toc_parser->trackdata[toc_parser->track].message;
+				toc_parser->parser_destination = &toc_parser->track_data[toc_parser->track].message;
 				toc_parser->state = TOC_PARSER_STATE_language_3;
 				return 0;
 			case TOC_TOKEN_GENRE:
@@ -471,14 +472,14 @@ static int toc_parse_token (struct toc_parser_t *toc_parser, enum TOC_tokens tok
 	{
 		switch (token)
 		{
-			case TOC_TOKEN_AUDIO:          toc_parser->trackdata[toc_parser->track].storage_mode = AUDIO;          break; /* 2352 bytes of raw audio data */
-			case TOC_TOKEN_MODE1:          toc_parser->trackdata[toc_parser->track].storage_mode = MODE1;          break; /* 2048 bytes of data */
-			case TOC_TOKEN_MODE1_RAW:      toc_parser->trackdata[toc_parser->track].storage_mode = MODE1_RAW;      break; /* 2352 bytes of raw data */
-			case TOC_TOKEN_MODE2:          toc_parser->trackdata[toc_parser->track].storage_mode = MODE2;          break; /* 2336 bytes of data - special sector size known as XA */
-			case TOC_TOKEN_MODE2_FORM1:    toc_parser->trackdata[toc_parser->track].storage_mode = MODE2_FORM1;    break; /* 2048 bytes of data - different wrapper, not visible for filesystem layer */
-			case TOC_TOKEN_MODE2_FORM2:    toc_parser->trackdata[toc_parser->track].storage_mode = MODE2_FORM2;    break; /* 2324 bytes of data - different wrapper, special sector size */
-			case TOC_TOKEN_MODE2_FORM_MIX: toc_parser->trackdata[toc_parser->track].storage_mode = MODE2_FORM_MIX; break; /* 2336 XA MODE-FORM1/2, includes the prefix SUBHEADER - different wrapper and two possible sector sizes */
-			case TOC_TOKEN_MODE2_RAW:      toc_parser->trackdata[toc_parser->track].storage_mode = MODE2_RAW;      break; /* 2352 bytes of raw data */
+			case TOC_TOKEN_AUDIO:          toc_parser->track_data[toc_parser->track].storage_mode = AUDIO;          break; /* 2352 bytes of raw audio data */
+			case TOC_TOKEN_MODE1:          toc_parser->track_data[toc_parser->track].storage_mode = MODE1;          break; /* 2048 bytes of data */
+			case TOC_TOKEN_MODE1_RAW:      toc_parser->track_data[toc_parser->track].storage_mode = MODE1_RAW;      break; /* 2352 bytes of raw data */
+			case TOC_TOKEN_MODE2:          toc_parser->track_data[toc_parser->track].storage_mode = MODE2;          break; /* 2336 bytes of data - special sector size known as XA */
+			case TOC_TOKEN_MODE2_FORM1:    toc_parser->track_data[toc_parser->track].storage_mode = MODE2_FORM1;    break; /* 2048 bytes of data - different wrapper, not visible for filesystem layer */
+			case TOC_TOKEN_MODE2_FORM2:    toc_parser->track_data[toc_parser->track].storage_mode = MODE2_FORM2;    break; /* 2324 bytes of data - different wrapper, special sector size */
+			case TOC_TOKEN_MODE2_FORM_MIX: toc_parser->track_data[toc_parser->track].storage_mode = MODE2_FORM_MIX; break; /* 2336 XA MODE-FORM1/2, includes the prefix SUBHEADER - different wrapper and two possible sector sizes */
+			case TOC_TOKEN_MODE2_RAW:      toc_parser->track_data[toc_parser->track].storage_mode = MODE2_RAW;      break; /* 2352 bytes of raw data */
 			default: return -1;
 		}
 		toc_parser->state = TOC_PARSER_STATE_track_1;
@@ -489,8 +490,8 @@ static int toc_parse_token (struct toc_parser_t *toc_parser, enum TOC_tokens tok
 	{
 		switch (token)
 		{
-			case TOC_TOKEN_RW_RAW: toc_parser->trackdata[toc_parser->track].storage_mode_subchannel = SUBCHANNEL_RW_RAW; toc_parser->state = TOC_PARSER_STATE_ready; return 0;
-			case TOC_TOKEN_RW:     toc_parser->trackdata[toc_parser->track].storage_mode_subchannel = SUBCHANNEL_RW;     toc_parser->state = TOC_PARSER_STATE_ready; return 0;
+			case TOC_TOKEN_RW_RAW: toc_parser->track_data[toc_parser->track].storage_mode_subchannel = SUBCHANNEL_RW_RAW; toc_parser->state = TOC_PARSER_STATE_ready; return 0;
+			case TOC_TOKEN_RW:     toc_parser->track_data[toc_parser->track].storage_mode_subchannel = SUBCHANNEL_RW;     toc_parser->state = TOC_PARSER_STATE_ready; return 0;
 			default:
 				break;
 		}
@@ -723,7 +724,7 @@ static int toc_parse_token (struct toc_parser_t *toc_parser, enum TOC_tokens tok
 			case TOC_TOKEN_TWO_CHANNEL_AUDIO:
 				return 0;
 			case TOC_TOKEN_FOUR_CHANNEL_AUDIO:
-				toc_parser->trackdata[toc_parser->track].four_channel_audio = 1;
+				toc_parser->track_data[toc_parser->track].four_channel_audio = 1;
 				return 0;
 			case TOC_TOKEN_ISRC:
 				toc_parser->state = TOC_PARSER_STATE_isrc;
@@ -1017,17 +1018,17 @@ void toc_parser_free (struct toc_parser_t *toc_parser)
 	int i, j;
 	for (i = 0; i < 100; i++)
 	{
-		free (toc_parser->trackdata[i].title);
-		free (toc_parser->trackdata[i].performer);
-		free (toc_parser->trackdata[i].songwriter);
-		free (toc_parser->trackdata[i].composer);
-		free (toc_parser->trackdata[i].arranger);
-		free (toc_parser->trackdata[i].message);
-		for (j = 0; j < toc_parser->trackdata[i].datasourceN; j++)
+		free (toc_parser->track_data[i].title);
+		free (toc_parser->track_data[i].performer);
+		free (toc_parser->track_data[i].songwriter);
+		free (toc_parser->track_data[i].composer);
+		free (toc_parser->track_data[i].arranger);
+		free (toc_parser->track_data[i].message);
+		for (j = 0; j < toc_parser->track_data[i].datasourceN; j++)
 		{
-			free (toc_parser->trackdata[i].datasource[j].filename);
+			free (toc_parser->track_data[i].datasource[j].filename);
 		}
-		free (toc_parser->trackdata[i].datasource);
+		free (toc_parser->track_data[i].datasource);
 	}
 	free (toc_parser);
 }
@@ -1070,245 +1071,6 @@ struct toc_parser_t *toc_parser_from_data (const char *input)
 	}
 
 	return retval;
-}
-
-static int wave_filename(const char *filename)
-{
-	int len = strlen (filename);
-	if (len < 4)
-	{
-		return 0;
-	}
-
-	if (!strcasecmp (filename + len - 4, ".wav"))
-	{
-		return 1;
-	}
-
-	if (len < 5)
-	{
-		return 0;
-	}
-
-	if (!strcasecmp (filename + len - 5, ".wave"))
-	{
-		return 1;
-	}
-
-	return 0;
-}
-
-static int wave_openfile2 (int fd, uint64_t *offset, uint64_t *length)
-{
-	uint8_t b16[16];
-	// RIFFoffset = 0
-	uint32_t  RIFFlen;
-	uint32_t _RIFFlen;
-
-	/* RIFF + len
-	 * {
-	 *   WAVE + len
-	 *   {
-	 *     fmt  + len
-	 *     {
-	 *        compression, alignement, bitrate, ....
-	 *     }
-	 *     ....
-	 *     data + len
-	 *     {
-	 *       pcm data....
-	 *     }
-	 *   }
-	 * }
-	 */
-
-	if (read (fd, b16, 8) != 8)
-	{
-		fprintf (stderr, "wave_openfile() failed to read RIFF header\n");
-		return -1;
-	}
-	if ((b16[0] != 'R') ||
-	    (b16[1] != 'I') ||
-	    (b16[2] != 'F') ||
-	    (b16[3] != 'F'))
-	{
-		fprintf (stderr, "wave_openfile() failed to verify RIFF header\n");
-		return -1;
-	}
-	_RIFFlen = RIFFlen = b16[4] | (b16[5] << 8) | (b16[6] << 16) | (b16[7] << 24);
-	if (RIFFlen < (4 + 8 + 16 + 8 + 1))
-	{
-		fprintf (stderr, "wave_openfile() RIFF length is smaller than absolute minimum size\n");
-		return -1;
-	}
-
-	if (read (fd, b16, 4) != 4)
-	{
-		fprintf (stderr, "wave_openfile() failed to read WAVE subheader\n");
-		return -1;
-	}
-	_RIFFlen -= 4;
-	if ((b16[0] != 'W') ||
-	    (b16[1] != 'A') ||
-	    (b16[2] != 'V') ||
-	    (b16[3] != 'E'))
-	{
-		fprintf (stderr, "wave_openfile() failed to verify WAVE subheader\n");
-		return -1;
-	}
-
-	/* locate "fmt ", it always appears before data */
-	while (1)
-	{
-		uint32_t sublen;
-		if (_RIFFlen < 8)
-		{
-			fprintf (stderr, "wave_openfile() ran out of space inside RIFF header when searching for fmt subheader #1\n");
-			return -1;
-		}
-
-		if (read (fd, b16, 8) != 8)
-		{
-			fprintf (stderr, "wave_openfile() failed to read WAVE subheader\n");
-			return -1;
-		}
-		_RIFFlen -= 8;
-		sublen = b16[4] | (b16[5] << 8) | (b16[6] << 16) | (b16[7] << 24);
-		if (_RIFFlen < sublen)
-		{
-			fprintf (stderr, "wave_openfile() ran out of space inside RIFF header when searching for fmt subheader #2\n");
-			return -1;
-		}
-		if ((b16[0] != 'f') ||
-		    (b16[1] != 'm') ||
-		    (b16[2] != 't') ||
-		    (b16[3] != ' '))
-		{
-			if (lseek (fd, sublen, SEEK_CUR) == (off_t) -1)
-			{
-				fprintf (stderr, "wave_openfile() lseek caused EOF when skipping chunk while searching for fmt subheader\n");
-				return -1;
-			}
-			_RIFFlen -= sublen;
-			continue;
-		}
-		if (sublen < 16)
-		{
-			fprintf (stderr, "wave_openfile() fmt subheader is way too small\n");
-			return -1;
-		}
-		if (read (fd, b16, 16) != 16)
-		{
-			fprintf (stderr, "wave_openfile() failed to read fmt data\n");
-			return -1;
-		}
-		if (sublen > 16)
-		{
-			if (lseek (fd, sublen - 16, SEEK_CUR) == (off_t) -1)
-			{
-				fprintf (stderr, "wave_openfile() lseek caused EOF when skipping end of fmt chunk\n");
-				return -1;
-			}
-		}
-		_RIFFlen -= sublen;
-		if ((b16[ 0] != 0x01) || // PCM-16bit
-		    (b16[ 1] != 0x00) || // ^
-
-		    (b16[ 2] != 0x02) || // 2-channels
-		    (b16[ 3] != 0x00) || // ^
-
-		    (b16[ 4] != 0x44) || // 44100Hz sample rate
-		    (b16[ 5] != 0xac) || // ^^^
-		    (b16[ 6] != 0x00) || // ^^
-		    (b16[ 7] != 0x00) || // ^
-
-		    (b16[ 8] != 0x10) || // 176400 bytes per second
-		    (b16[ 9] != 0xb1) || // ^^^
-		    (b16[10] != 0x02) || // ^^
-		    (b16[11] != 0x00) || // ^
-
-		    (b16[12] != 0x04) || // 4 bytes block align (bytes per sample)
-		    (b16[13] != 0x00) || // ^
-
-		    (b16[14] != 0x10) || // 16 bits per sample
-		    (b16[15] != 0x00))   // ^
-		{
-			fprintf (stderr, "wave_openfile() WAV file is not 16bit stereo 44100Hz PCM formatted\n");
-			return -1;
-		}
-		break; 
-	}
-
-	/* locate "data" */
-	while (1)
-	{
-		uint32_t sublen;
-		if (_RIFFlen < 8)
-		{
-			fprintf (stderr, "wave_openfile() ran out of space inside RIFF header when searching for data subheader #1\n");
-			return -1;
-		}
-
-		if (read (fd, b16, 8) != 8)
-		{
-			fprintf (stderr, "wave_openfile() failed to read WAVE subheader\n");
-			return -1;
-		}
-		_RIFFlen -= 8;
-		sublen = b16[4] | (b16[5] << 8) | (b16[6] << 16) | (b16[7] << 24);
-		if (_RIFFlen < sublen)
-		{
-			fprintf (stderr, "wave_openfile() ran out of space inside RIFF header when searching for data subheader #2\n");
-			return -1;
-		}
-		if ((b16[0] != 'd') ||
-		    (b16[1] != 'a') ||
-		    (b16[2] != 't') ||
-		    (b16[3] != 'a'))
-		{
-			if (lseek (fd, sublen, SEEK_CUR) == (off_t) -1)
-			{
-				fprintf (stderr, "wave_openfile() lseek caused EOF when skipping chunk while searching for fmt subheader\n");
-				return -1;
-			}
-			_RIFFlen -= sublen;
-			continue;
-		}
-		*offset = RIFFlen - _RIFFlen + 8;
-		*length = sublen;
-		return 0;
-	}
-}
-
-static int wave_openfile (const char *cwd, const char *filename, int *fd, uint64_t *offset, uint64_t *length)
-{
-	int l = strlen (cwd);
-	char *f = malloc (l + 1 + strlen(filename) + 1);
-
-#warning Cache of already parsed files is needed....
-
-	if (!f)
-	{
-		return -1;
-	}
-	sprintf (f, "%s/%s", cwd, filename);
-	*fd = open (f, O_RDONLY);
-	free (f);
-	if (*fd < 0)
-	{
-		fprintf (stderr, "wave_openfile() failed to open %s\n", filename);
-		return -1;
-	}
-
-	if (wave_openfile2(*fd, offset, length))
-	{
-		close (*fd);
-		*fd = -1;
-		*offset = 0;
-		*length = 0;
-		return -1;
-	}
-	return 0;
 }
 
 static int data_openfile (const char *cwd, const char *filename, int *fd, uint64_t *length)
@@ -1361,48 +1123,48 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 	{
 		uint32_t tracklength = 0; /* in sectors */
 		int j;
-		for (j=0; j < toc_parser->trackdata[i].datasourceN; j++)
+		for (j=0; j < toc_parser->track_data[i].datasourceN; j++)
 		{
-			if (!toc_parser->trackdata[i].datasource[j].length)
+			if (!toc_parser->track_data[i].datasource[j].length)
 			{ /* ignore zero length entries */
 				continue;
 			}
 
-			if (!toc_parser->trackdata[i].datasource[j].filename)
+			if (!toc_parser->track_data[i].datasource[j].filename)
 			{ /* zero-fill */
-				if (toc_parser->trackdata[i].datasource[j].length < 0)
+				if (toc_parser->track_data[i].datasource[j].length < 0)
 				{
 					goto fail_out;
 				}
-				tracklength += toc_parser->trackdata[i].datasource[j].length;
+				tracklength += toc_parser->track_data[i].datasource[j].length;
 				continue;
 			}
 
-			if ((toc_parser->trackdata[i].storage_mode == AUDIO) &&
-			    (toc_parser->trackdata[i].storage_mode_subchannel == NONE) &&
-			    wave_filename (toc_parser->trackdata[i].datasource[j].filename))
+			if ((toc_parser->track_data[i].storage_mode == AUDIO) &&
+			    (toc_parser->track_data[i].storage_mode_subchannel == NONE) &&
+			    wave_filename (toc_parser->track_data[i].datasource[j].filename))
 			{
 				int fd = -1;
 				uint64_t offset = 0;
 				uint64_t length = 0;
 				uint32_t lengthsectors;
 
-				if (wave_openfile (argv1_path, toc_parser->trackdata[i].datasource[j].filename, &fd, &offset, &length))
+				if (wave_openfile (argv1_path, toc_parser->track_data[i].datasource[j].filename, &fd, &offset, &length))
 				{
-					fprintf (stderr, "Failed to open wave file %s (format must be stereo, 16bit, 44100 sample-rate)\n", toc_parser->trackdata[i].datasource[j].filename);
+					fprintf (stderr, "Failed to open wave file %s (format must be stereo, 16bit, 44100 sample-rate)\n", toc_parser->track_data[i].datasource[j].filename);
 					goto fail_out;
 				}
 
-				if (toc_parser->trackdata[i].datasource[j].offset>=0)
+				if (toc_parser->track_data[i].datasource[j].offset>=0)
 				{
-					if (toc_parser->trackdata[i].datasource[j].offset >= length)
+					if (toc_parser->track_data[i].datasource[j].offset >= length)
 					{
 						fprintf (stderr, "Wave file shorter than offset in .toc file\n");
 						close (fd);
 						goto fail_out;
 					}
-					offset += toc_parser->trackdata[i].datasource[j].offset;
-					length -= toc_parser->trackdata[i].datasource[j].offset;
+					offset += toc_parser->track_data[i].datasource[j].offset;
+					length -= toc_parser->track_data[i].datasource[j].offset;
 				}
 
 				lengthsectors = (length + 2352 - 1) / 2352; /* round up to nearest sector */
@@ -1410,7 +1172,7 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 				                             trackoffset + tracklength,                       /* medium sector offset */
 				                             lengthsectors,                                   /* medium sector count */
 				                             fd,                                              /* source file-descriptor */
-				                             toc_parser->trackdata[i].datasource[j].filename, /* source file-name */
+				                             toc_parser->track_data[i].datasource[j].filename, /* source file-name */
 				                             FORMAT_AUDIO___NONE,                             /* source sector encoding */
 				                             offset,                                          /* source byte offset */
 				                             length);                                         /* source byte length */
@@ -1422,36 +1184,36 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 				uint32_t lengthsectors;
 				int ss;
 
-				if (data_openfile (argv1_path, toc_parser->trackdata[i].datasource[j].filename, &fd, &length))
+				if (data_openfile (argv1_path, toc_parser->track_data[i].datasource[j].filename, &fd, &length))
 				{
-					fprintf (stderr, "Failed to open data file %s\n", toc_parser->trackdata[i].datasource[j].filename);
+					fprintf (stderr, "Failed to open data file %s\n", toc_parser->track_data[i].datasource[j].filename);
 					goto fail_out;
 				}
 
-				if (toc_parser->trackdata[i].datasource[j].offset>=0)
+				if (toc_parser->track_data[i].datasource[j].offset>=0)
 				{
-					if (toc_parser->trackdata[i].datasource[j].offset >= length)
+					if (toc_parser->track_data[i].datasource[j].offset >= length)
 					{
 						fprintf (stderr, "Data file shorter than offset in .toc file\n");
 						close (fd);
 						goto fail_out;
 					}
-					offset += toc_parser->trackdata[i].datasource[j].offset;
-					length -= toc_parser->trackdata[i].datasource[j].offset;
+					offset += toc_parser->track_data[i].datasource[j].offset;
+					length -= toc_parser->track_data[i].datasource[j].offset;
 				}
 
-				ss = medium_sector_size (toc_parser->trackdata[i].storage_mode,
-				                         toc_parser->trackdata[i].storage_mode_subchannel);
+				ss = medium_sector_size (toc_parser->track_data[i].storage_mode,
+				                         toc_parser->track_data[i].storage_mode_subchannel);
 
 				lengthsectors = (length + ss - 1) / ss; /* round up to nearest sector */
 				cdfs_disc_append_datasource (retval,
 				                             trackoffset + tracklength,                       /* medium sector offset */
 				                             lengthsectors,                                   /* medium sector count */
 				                             fd,                                              /* source file-descriptor */
-				                             toc_parser->trackdata[i].datasource[j].filename, /* source file-name */
-				                             toc_storage_mode_to_cdfs_format (toc_parser->trackdata[i].storage_mode,
-				                                                              toc_parser->trackdata[i].storage_mode_subchannel,
-				                                                              toc_parser->trackdata[i].datasource[j].swap),
+				                             toc_parser->track_data[i].datasource[j].filename, /* source file-name */
+				                             toc_storage_mode_to_cdfs_format (toc_parser->track_data[i].storage_mode,
+				                                                              toc_parser->track_data[i].storage_mode_subchannel,
+				                                                              toc_parser->track_data[i].datasource[j].swap),
 				                                                                              /* source sector encoding */
 				                             offset,                                          /* source byte offset */
 				                             length);                                         /* source byte length */
@@ -1460,15 +1222,15 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 		}
 
 		cdfs_disc_track_append (retval,
-		                        toc_parser->trackdata[i].pregap,
+		                        toc_parser->track_data[i].pregap,
 		                        trackoffset,
 		                        tracklength,
-		                        toc_parser->trackdata[i].title,
-		                        toc_parser->trackdata[i].performer,
-		                        toc_parser->trackdata[i].songwriter,
-		                        toc_parser->trackdata[i].composer,
-		                        toc_parser->trackdata[i].arranger,
-		                        toc_parser->trackdata[i].message
+		                        toc_parser->track_data[i].title,
+		                        toc_parser->track_data[i].performer,
+		                        toc_parser->track_data[i].songwriter,
+		                        toc_parser->track_data[i].composer,
+		                        toc_parser->track_data[i].arranger,
+		                        toc_parser->track_data[i].message
 		                       /* we ignore four_channel_audio - never used in real-life
 				        *           [no] copy
 		                        *           [no] pre-emphasis
