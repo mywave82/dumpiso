@@ -248,4 +248,38 @@ int wave_openfile (const char *cwd, const char *filename, int *fd, uint64_t *off
 	return 0;
 }
 
+int data_openfile (const char *cwd, const char *filename, int *fd, uint64_t *length)
+{
+	int l = strlen (cwd);
+	char *f = malloc (l + 1 + strlen(filename) + 1);
+	struct stat st;
+
+#warning Cache of already parsed files is needed....
+
+	if (!f)
+	{
+		return -1;
+	}
+	sprintf (f, "%s/%s", cwd, filename);
+	*fd = open (f, O_RDONLY);
+	free (f);
+	if (*fd < 0)
+	{
+		fprintf (stderr, "data_openfile() failed to open %s\n", filename);
+		return -1;
+	}
+
+	if (fstat (*fd, &st))
+	{
+		fprintf (stderr, "data_openfile() fstat() failed\n");
+		close (*fd);
+		*fd = -1;
+		return -1;
+	}
+
+	*length = st.st_size;
+
+	return 0;
+}
+
 

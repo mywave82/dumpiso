@@ -16,6 +16,12 @@ cdfs.o: cdfs.c \
 	iso9660.h
 	$(CC) $(CFLAGS) $< -o $@ -c
 
+cue.o: cue.c \
+	cue.h \
+	cdfs.h \
+	wave.h
+	$(CC) $(CFLAGS) $< -o $@ -c
+
 iso9660.o: iso9660.c \
 	amiga.c      \
 	ElTorito.c   \
@@ -28,6 +34,7 @@ iso9660.o: iso9660.c \
 
 main.o: main.c \
 	cdfs.h \
+	cue.h \
 	iso9660.h \
 	main.h \
 	toc.h \
@@ -50,7 +57,7 @@ wave.o: wave.c \
 	wave.h
 	$(CC) $(CFLAGS) $< -o $@ -c
 
-dumpiso: cdfs.o iso9660.o main.o udf.o toc.o wave.o
+dumpiso: cdfs.o cue.o iso9660.o main.o udf.o toc.o wave.o
 	$(CCLD) $(CCLDFLAGS) $^ -o $@
 
 dump_subchannel_rw.o: dump_subchannel_rw.c

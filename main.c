@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "cdfs.h"
+#include "cue.h"
 #include "iso9660.h"
 #include "main.h"
 #include "toc.h"
@@ -30,6 +31,22 @@ static char *get_path(const char *sourcefile)
 	return retval;
 }
 
+static int is_filename_cue (const char *filename)
+{
+	int len = strlen (filename);
+	if (len < 4)
+	{
+		return 0;
+	}
+
+	if (!strcasecmp (filename + len - 4, ".cue"))
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
 static int is_filename_toc (const char *filename)
 {
 	int len = strlen (filename);
@@ -45,7 +62,6 @@ static int is_filename_toc (const char *filename)
 
 	return 0;
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -73,7 +89,7 @@ int main(int argc, char *argv[])
 
 	if (argc != 2)
 	{
-		fprintf (stderr, "Usage:\n%s <file.iso file.bin>\n%s <file.toc>\n", argv[0], argv[0]);
+		fprintf (stderr, "Usage:\n%s <file.iso file.bin>\n%s <file.toc>\n%s <file.toc>\n", argv[0], argv[0], argv[0]);
 		iconv_close (UTF16BE_cd);
 		return 1;
 	}
@@ -94,7 +110,29 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (is_filename_toc (argv[1]))
+	if (is_filename_cue (argv[1]))
+	{
+		struct cue_parser_t *cue = cue_parser_from_fd (isofile_fd);
+		char *argv1_path;
+
+		close (isofile_fd);
+		isofile_fd = -1;
+		if (!cue)
+		{
+			iconv_close (UTF16BE_cd);
+			return 1;
+		}
+
+		argv1_path = get_path (argv[1]);
+		disc = cue_parser_to_cdfs_disc (argv1_path, cue);
+		free (argv1_path);
+		cue_parser_free (cue);
+		if (!disc)
+		{
+			iconv_close (UTF16BE_cd);
+			return 1;
+		}
+	} else if (is_filename_toc (argv[1]))
 	{
 		struct toc_parser_t *toc = toc_parser_from_fd (isofile_fd);
 		char *argv1_path;

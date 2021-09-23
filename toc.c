@@ -1073,40 +1073,6 @@ struct toc_parser_t *toc_parser_from_data (const char *input)
 	return retval;
 }
 
-static int data_openfile (const char *cwd, const char *filename, int *fd, uint64_t *length)
-{
-	int l = strlen (cwd);
-	char *f = malloc (l + 1 + strlen(filename) + 1);
-	struct stat st;
-
-#warning Cache of already parsed files is needed....
-
-	if (!f)
-	{
-		return -1;
-	}
-	sprintf (f, "%s/%s", cwd, filename);
-	*fd = open (f, O_RDONLY);
-	free (f);
-	if (*fd < 0)
-	{
-		fprintf (stderr, "data_openfile() failed to open %s\n", filename);
-		return -1;
-	}
-
-	if (fstat (*fd, &st))
-	{
-		fprintf (stderr, "data_openfile() fstat() failed\n");
-		close (*fd);
-		*fd = -1;
-		return -1;
-	}
-
-	*length = st.st_size;
-
-	return 0;
-}
-
 struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_parser_t *toc_parser)
 {
 	struct cdfs_disc_t *retval = calloc (sizeof (*retval), 1);

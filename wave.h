@@ -7,4 +7,6 @@ int wave_filename(const char *filename);
 
 int wave_openfile (const char *cwd, const char *filename, int *fd, uint64_t *offset, uint64_t *length);
 
+int data_openfile (const char *cwd, const char *filename, int *fd, uint64_t *length);
+
 #endif
