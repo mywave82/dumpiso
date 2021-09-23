@@ -1046,7 +1046,7 @@ struct cdfs_disc_t *cue_parser_to_cdfs_disc (const char *argv1_path, struct cue_
 
 		ms = medium_sector_size (mode);
 		sectorcount = (length + ms - 1) / ms;
-		cdfs_disc_append_datasource (retval,
+		cdfs_disc_datasource_append (retval,
 		                             discoffset,
 		                             sectorcount,
 		                             fd,

@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 
-		cdfs_disc_append_datasource (disc,
+		cdfs_disc_datasource_append (disc,
 		                             0,                   /* sectoroffset */
 		                             isofile_sectorcount,
 		                             isofile_fd,

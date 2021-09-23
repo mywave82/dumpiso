@@ -421,7 +421,7 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 	return 1;
 }
 
-void cdfs_disc_append_datasource (struct cdfs_disc_t *disc,
+void cdfs_disc_datasource_append (struct cdfs_disc_t *disc,
                                   uint32_t            sectoroffset,
                                   uint32_t            sectorcount,
                                   int                 fd,
@@ -453,7 +453,7 @@ void cdfs_disc_append_datasource (struct cdfs_disc_t *disc,
 		{
 			close (fd);
 		}
-		fprintf (stderr, "cdfs_disc_append_datasource() realloc failed\n");
+		fprintf (stderr, "cdfs_disc_datasource_append() realloc failed\n");
 		return;
 	}
 	disc->datasources_data = temp;

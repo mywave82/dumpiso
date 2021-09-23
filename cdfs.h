@@ -189,7 +189,7 @@ struct cdfs_disc_t
 	struct UDF_Session       *udf_session;
 };
 
-void cdfs_disc_append_datasource (struct cdfs_disc_t *disc,
+void cdfs_disc_datasource_append (struct cdfs_disc_t *disc,
                                   uint32_t            sectoroffset,
                                   uint32_t            sectorcount,
                                   int                 fd,

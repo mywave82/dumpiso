@@ -1134,7 +1134,7 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 				}
 
 				lengthsectors = (length + 2352 - 1) / 2352; /* round up to nearest sector */
-				cdfs_disc_append_datasource (retval,
+				cdfs_disc_datasource_append (retval,
 				                             trackoffset + tracklength,                       /* medium sector offset */
 				                             lengthsectors,                                   /* medium sector count */
 				                             fd,                                              /* source file-descriptor */
@@ -1172,7 +1172,7 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 				                         toc_parser->track_data[i].storage_mode_subchannel);
 
 				lengthsectors = (length + ss - 1) / ss; /* round up to nearest sector */
-				cdfs_disc_append_datasource (retval,
+				cdfs_disc_datasource_append (retval,
 				                             trackoffset + tracklength,                       /* medium sector offset */
 				                             lengthsectors,                                   /* medium sector count */
 				                             fd,                                              /* source file-descriptor */
