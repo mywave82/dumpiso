@@ -199,6 +199,19 @@ int main(int argc, char *argv[])
 		                        0); /* message */
 	}
 
+	{
+		int i;
+		for (i=0; i < disc->datasources_count; i++)
+		{
+			printf ("DISC-SOURCE.%d first:%d last:%d (length=%d) zerofill=%d\n",
+				i,
+				disc->datasources_data[i].sectoroffset,
+				disc->datasources_data[i].sectoroffset + disc->datasources_data[i].sectorcount - 1,
+				disc->datasources_data[i].sectorcount,
+				!disc->datasources_data[i].filename);
+		}
+	}
+
 	while (!descriptorend)
 	{
 		uint32_t sector = 16 + descriptor;
