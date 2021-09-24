@@ -1089,6 +1089,7 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 	{
 		uint32_t tracklength = 0; /* in sectors */
 		int j;
+
 		for (j=0; j < toc_parser->track_data[i].datasourceN; j++)
 		{
 			if (!toc_parser->track_data[i].datasource[j].length)
@@ -1102,6 +1103,16 @@ struct cdfs_disc_t *toc_parser_to_cdfs_disc (const char *argv1_path, struct toc_
 				{
 					goto fail_out;
 				}
+
+				cdfs_disc_datasource_append (retval,
+				                             trackoffset+tracklength,                         /* medium sector offset */
+				                             toc_parser->track_data[i].datasource[j].length,  /* medium sector count */
+				                             -1,                                              /* source file-descriptor */
+				                             0,                                               /* source file-name */
+				                             FORMAT_RAW___NONE,                               /* source sector encoding */
+				                             0,                                               /* source byte offset */
+				                             0);                                              /* source byte length */
+
 				tracklength += toc_parser->track_data[i].datasource[j].length;
 				continue;
 			}
