@@ -256,6 +256,13 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 		if (  (disc->datasources_data[i].sectoroffset <= sector) &&
 		     ((disc->datasources_data[i].sectoroffset + disc->datasources_data[i].sectorcount) >= sector))
 		{
+			uint32_t relsector = sector - disc->datasources_data[i].sectoroffset;
+			if (!disc->datasources_data[i].filename)
+			{
+				bzero (buffer, 2048);
+				return 0;
+			}
+
 			switch (disc->datasources_data[i].format)
 			{
 				case FORMAT_AUDIO_SWAP___RAW_RW:
@@ -278,9 +285,9 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 				case FORMAT_MODE1_RAW___NONE:
 				case FORMAT_MODE2_RAW___NONE:
 				case FORMAT_XA_MODE2_RAW:
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE_XA2 + subchannel), SEEK_SET) == (off_t)-1)
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)relsector)*(SECTORSIZE_XA2 + subchannel), SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*%d, SEEK_SET) failed\n", sector, SECTORSIZE_XA2 + subchannel);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*%d, SEEK_SET) failed\n", relsector, SECTORSIZE_XA2 + subchannel);
 						return -1;
 					}
 
@@ -291,7 +298,7 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 					}
 					if (memcmp (xbuffer, "\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00", 12))
 					{
-						fprintf (stderr, "Invalid sync in sector %"PRId32"\n", sector);
+						fprintf (stderr, "Invalid sync in sector %"PRId32"\n", relsector);
 						return -1;
 					}
 					// xbuffer[12, 13 and 14] should be the current sector adress
@@ -333,9 +340,9 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 					subchannel = 96;
 					/* fall-through */
 				case FORMAT_XA_MODE2_FORM_MIX___NONE: /* not tested */
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(2324 + 8 + subchannel), SEEK_SET) == (off_t)-1)
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)relsector)*(2324 + 8 + subchannel), SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*(%d), SEEK_SET) failed\n", sector, 2324 + 8 + subchannel);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*(%d), SEEK_SET) failed\n", relsector, 2324 + 8 + subchannel);
 						return -1;
 					}
 
@@ -369,9 +376,9 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 				case FORMAT_MODE_1__XA_MODE2_FORM1___RAW_RW:
 				case FORMAT_MODE_1__XA_MODE2_FORM1___RW:
 
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE + subchannel), SEEK_SET) == (off_t)-1)
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)relsector)*(SECTORSIZE + subchannel), SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*%d, SEEK_SET) failed\n", sector, SECTORSIZE + subchannel);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*%d, SEEK_SET) failed\n", relsector, SECTORSIZE + subchannel);
 						return -1;
 					}
 					if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
@@ -387,9 +394,9 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 					/* fall-through */
 				case FORMAT_XA1_MODE2_FORM1___NONE:
 					// Ignore the sub-header, for now */
-					if (lseek (disc->datasources_data[i].fd, ((uint64_t)sector)*(SECTORSIZE + 8 + subchannel) + 8, SEEK_SET) == (off_t)-1)
+					if (lseek (disc->datasources_data[i].fd, ((uint64_t)relsector)*(SECTORSIZE + 8 + subchannel) + 8, SEEK_SET) == (off_t)-1)
 					{
-						fprintf (stderr, "fseek(fd, (%"PRId32")*%d + 8, SEEK_SET) failed\n", sector, SECTORSIZE + 8 + subchannel);
+						fprintf (stderr, "fseek(fd, (%"PRId32")*%d + 8, SEEK_SET) failed\n", relsector, SECTORSIZE + 8 + subchannel);
 						return -1;
 					}
 					if (read (disc->datasources_data[i].fd, buffer, SECTORSIZE) != SECTORSIZE)
