@@ -73,7 +73,7 @@ int detect_isofile_sectorformat (int isofile_fd, const char *filename, off_t st_
 		return 0;
 	}
 
-	/* Detect FORMAT_RAW___NONE MODE-1 / MODE-2 FORM-1*/
+	/* Detect FORMAT_RAW___NONE MODE-1 / MODE-2 FORM-1 */
 	if (lseek (isofile_fd, (SECTORSIZE_XA2) * 16, SEEK_SET) == (off_t)-1)
 	{
 		perror ("lseek(argv[1]) #3");
@@ -242,14 +242,11 @@ int detect_isofile_sectorformat (int isofile_fd, const char *filename, off_t st_
 	return 1;
 }
 
-
 int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t *buffer) /* 2048 byte modes */
 {
 	int i;
 	uint8_t xbuffer[16];
 	int subchannel = 0;
-
-#warning zero-fill.....
 
 	for (i=0; i < disc->datasources_count; i++)
 	{
@@ -315,7 +312,7 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 							}
 							return 0;
 						case 0xe2: /* Seems to be second to last sector on CD-R, mode-2 */
-						case 0x02: /* MODE 2*/
+						case 0x02: /* MODE 2 */
 							/* assuming XA-FORM-1, that is the only mode2 that can provide 2048 bytes of data */
 #warning ignoring sub-header in FORMAT_XA_MODE2_RAW for now..
 							if (read (disc->datasources_data[i].fd, xbuffer, 8) != 8)
@@ -348,7 +345,7 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 
 					if (read (disc->datasources_data[i].fd, xbuffer, 8) != 8)
 					{
-						fprintf (stderr, "read(fd, xbuffer, 16) failed\n");
+						fprintf (stderr, "read(fd, xbuffer, 8) failed\n");
 						return -1;
 					}
 #warning ignoring sub-header in FORMAT_XA_MODE2_FORM_MIX for now..
@@ -364,17 +361,17 @@ int get_absolute_sector_2048 (struct cdfs_disc_t *disc, uint32_t sector, uint8_t
 					}
 					return 0;
 
-				case FORMAT_MODE1___NONE:
-				case FORMAT_XA_MODE2_FORM1___NONE:
-				case FORMAT_MODE_1__XA_MODE2_FORM1___NONE:
-					subchannel = 96;
-					/* fall-through */
 				case FORMAT_MODE1___RAW_RW:
 				case FORMAT_MODE1___RW:
 				case FORMAT_XA_MODE2_FORM1___RAW_RW:
 				case FORMAT_XA_MODE2_FORM1___RW:
 				case FORMAT_MODE_1__XA_MODE2_FORM1___RAW_RW:
 				case FORMAT_MODE_1__XA_MODE2_FORM1___RW:
+					subchannel = 96;
+					/* fall-through */
+				case FORMAT_MODE1___NONE:
+				case FORMAT_XA_MODE2_FORM1___NONE:
+				case FORMAT_MODE_1__XA_MODE2_FORM1___NONE:
 
 					if (lseek (disc->datasources_data[i].fd, ((uint64_t)relsector)*(SECTORSIZE + subchannel), SEEK_SET) == (off_t)-1)
 					{
