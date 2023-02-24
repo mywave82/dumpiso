@@ -3923,11 +3923,11 @@ static void _UDF_Descriptor (struct cdfs_disc_t *disc, enum UDF_SectorSize Secto
 		printf ("SearchEnd=%" PRId32 "\n", SearchEnd);
 		if (SearchEnd > 256)
 		{
-			if (get_absolute_sector (SectorSize, disc, SearchEnd - 1, buffer))
+			if (get_absolute_sector (SectorSize, disc, SearchEnd, buffer))
 			{
 				printf ("Failed to fetch sector N");
 			} else {
-				invalid_N = AnchorVolumeDescriptorPointer (SectorSize, n, buffer, SearchEnd - 1, &MainVolumeDescriptorSequenceExtent_N, &ReserveVolumeDescriptorSequenceExtent_N);
+				invalid_N = AnchorVolumeDescriptorPointer (SectorSize, n, buffer, SearchEnd, &MainVolumeDescriptorSequenceExtent_N, &ReserveVolumeDescriptorSequenceExtent_N);
 			}
 
 			if (get_absolute_sector (SectorSize, disc, SearchEnd - 256, buffer))
