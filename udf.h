@@ -304,6 +304,13 @@ struct UDF_LogicalVolumes_t
 	struct UDF_LogicalVolume_Common    **LogicalVolume;
 };
 
+enum UDF_SectorSize
+{
+	UDF_SectorSize_512 = 512,
+	UDF_SectorSize_2048 = 2048,
+	UDF_SectorSize_4096 = 4096,
+};
+
 struct UDF_Session
 {
 	struct UDF_PrimaryVolumeDescriptor *PrimaryVolumeDescriptor;
@@ -315,6 +322,8 @@ struct UDF_Session
 	struct UDF_PhysicalPartition_t   *PhysicalPartition; /* zero terminated  */
 
 	struct UDF_LogicalVolumes_t      *LogicalVolumes; /* We keep only the one with the highest VolumeDescriptorSequenceNumber */
+
+	enum UDF_SectorSize               SectorSize;
 };
 
 
