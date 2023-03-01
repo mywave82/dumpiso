@@ -1362,7 +1362,7 @@ static int FileEntryLoadData (struct cdfs_disc_t *disc, struct UDF_FileEntry_t *
 			{
 				r = MAXSECTORSIZE;
 			}
-			FE->FileAllocation[i].Partition->FetchSector (disc, FE->FileAllocation[i].Partition, b, FE->FileAllocation[i].ExtentLocation + (j / MAXSECTORSIZE));
+			FE->FileAllocation[i].Partition->FetchSector (disc, FE->FileAllocation[i].Partition, b, FE->FileAllocation[i].ExtentLocation + (j / disc->udf_session->SectorSize));
 			b += r;
 			if (l < r)
 			{ /* should not happend if UDF image is healthy */
@@ -3161,48 +3161,48 @@ static void VolumeDescriptorSequence (int n, struct cdfs_disc_t *disc, struct UD
 	int i;
 	int Terminated = 0;
 	N(n); printf ("[Volume Descriptor Sequence]\n");
-	for (i=0; i*MAXSECTORSIZE < bufferlen; i++)
+	for (i=0; i * disc->udf_session->SectorSize < bufferlen; i++)
 	{
 		char prefix[16];
 		uint16_t TagIdentifier;
 
 		// This should not happen. Length should always be a multiple of 2048
-		if ((bufferlen - i * MAXSECTORSIZE) < SECTORSIZE)
+		if ((bufferlen - i * disc->udf_session->SectorSize) < disc->udf_session->SectorSize)
 		{
 			break;
 		}
 
 #if 1
 		snprintf (prefix, sizeof (prefix), "%d.", i + 1);
-		if (print_tag_format (disc->udf_session->SectorSize, n+1, prefix, buffer + i * MAXSECTORSIZE, TagLocation + i, 1, &TagIdentifier))
+		if (print_tag_format (disc->udf_session->SectorSize, n+1, prefix, buffer + i * disc->udf_session->SectorSize, TagLocation + i, 1, &TagIdentifier))
 		{
 			break;
 		}
 #else
-		TagIdentifier = (buffer[i * MAXSECTORSIZE + 1] << 8) | buffer[i * SECTORSIZE + 0];
+		TagIdentifier = (buffer[i * disc->udf_session->SectorSize + 1] << 8) | buffer[i * disc->udf_session->SectorSize + 0];
 
 		N(n+1); printf ("%d.DescriptorTag.TagIdentifier:       %d - %s\n", i + 1, TagIdentifier, TagIdentifierName (TagIdentifier));
-		N(n+1); printf ("%d.DescriptorTag.DescriptorVersion:   %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 3]<<8) | buffer[i * SECTORSIZE + 2]);
-		N(n+1); printf ("%d.DescriptorTag.TagChecksum:         %d\n", i + 1, buffer[i * MAXSECTORSIZE + 4]);
-		//N(n+1); printf ("%d.DescriptorTag.Reserved:            %d\n", i + 1, buffer[i * MAXSECTORSIZE + 5]);
-		N(n+1); printf ("%d.DescriptorTag.TagSerialNumber:     %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 7]<<8) | buffer[i * SECTORSIZE + 6]);
-		N(n+1); printf ("%d.DescriptorTag.DescriptorCRC:       %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 9]<<8) | buffer[i * SECTORSIZE + 8]);
-		N(n+1); printf ("%d.DescriptorTag.DescriptorCRCLength: %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 11]<<8) | buffer[i * SECTORSIZE + 10]);
-		N(n+1); printf ("%d.DescriptorTag.TagLocation:         %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 15]<<24) | (buffer[i * SECTORSIZE + 14]<<16) | (buffer[i * SECTORSIZE + 13]<<8) | buffer[i * SECTORSIZE + 12]);
+		N(n+1); printf ("%d.DescriptorTag.DescriptorVersion:   %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 3]<<8) | buffer[i * disc->udf_session->SectorSize + 2]);
+		N(n+1); printf ("%d.DescriptorTag.TagChecksum:         %d\n", i + 1, buffer[i * disc->udf_session->SectorSize + 4]);
+		//N(n+1); printf ("%d.DescriptorTag.Reserved:            %d\n", i + 1, buffer[i * disc->udf_session->SectorSize + 5]);
+		N(n+1); printf ("%d.DescriptorTag.TagSerialNumber:     %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 7]<<8) | buffer[i * disc->udf_session->SectorSize + 6]);
+		N(n+1); printf ("%d.DescriptorTag.DescriptorCRC:       %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 9]<<8) | buffer[i * disc->udf_session->SectorSize + 8]);
+		N(n+1); printf ("%d.DescriptorTag.DescriptorCRCLength: %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 11]<<8) | buffer[i * disc->udf_session->SectorSize + 10]);
+		N(n+1); printf ("%d.DescriptorTag.TagLocation:         %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 15]<<24) | (buffer[i * disc->udf_session->SectorSize + 14]<<16) | (buffer[i * disc->udf_session->SectorSize + 13]<<8) | buffer[i * disc->udf_session->SectorSize + 12]);
 #endif
 
 		switch (TagIdentifier)
 		{
-		//      case 0x0000: SparingTablelayout (n+2, disc, buffer + i * MAXSECTORSIZE); break; // from the UDF specifications
-			case 0x0001: PrimaryVolumeDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); break;
-		//	case 0x0002: AnchorVolumeDescriptorPointer (n+2, disc, buffer + i * MAXSECTORSIZE); break;  <- not allowed
-		//	case 0x0003: VolumeDescriptorPointer (n+2, disc, buffer + i * MAXSECTORSIZE); break;
-			case 0x0004: ImplementationUseVolumeDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); break;
-			case 0x0005: PartitionDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); break;
-			case 0x0006: LogicalVolumeDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); break;
-			case 0x0007: UnallocatedSpaceDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); break;
-			case 0x0008: TerminatingDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); Terminated = 1; break;
-		//	case 0x0009: LogicalVolumeIntegrityDescriptor (n+2, disc, buffer + i * MAXSECTORSIZE); break;
+		//      case 0x0000: SparingTablelayout (n+2, disc, buffer + i * disc->udf_session->SectorSize); break; // from the UDF specifications
+			case 0x0001: PrimaryVolumeDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
+		//	case 0x0002: AnchorVolumeDescriptorPointer (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;  <- not allowed
+		//	case 0x0003: VolumeDescriptorPointer (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
+			case 0x0004: ImplementationUseVolumeDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
+			case 0x0005: PartitionDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
+			case 0x0006: LogicalVolumeDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
+			case 0x0007: UnallocatedSpaceDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
+			case 0x0008: TerminatingDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); Terminated = 1; break;
+		//	case 0x0009: LogicalVolumeIntegrityDescriptor (n+2, disc, buffer + i * disc->udf_session->SectorSize); break;
 			default:
 				printf ("Illegal sequence\n");
 				break;
@@ -3221,40 +3221,40 @@ static void LogicalVolumeIntegritySequence (int n, struct cdfs_disc_t *disc, str
 	int i;
 	int Terminated = 0;
 	N(n); printf ("[Logical Volume Integrity Sequence]\n");
-	for (i=0; i*MAXSECTORSIZE < bufferlen; i++)
+	for (i=0; i * disc->udf_session->SectorSize < bufferlen; i++)
 	{
 		char prefix[16];
 		uint16_t TagIdentifier;
 
-		// This should not happen. Length should always be a multiple of 2048
-		if ((bufferlen - i * MAXSECTORSIZE) < SECTORSIZE)
+		// This should not happen. Length should always be a multiple of SectorSize
+		if ((bufferlen - i * disc->udf_session->SectorSize) < disc->udf_session->SectorSize)
 		{
 			break;
 		}
 
 #if 1
 		snprintf (prefix, sizeof (prefix), "%d.", i + 1);
-		if (print_tag_format (disc->udf_session->SectorSize, n+1, prefix, buffer + i * MAXSECTORSIZE, TagLocation + i, 1, &TagIdentifier))
+		if (print_tag_format (disc->udf_session->SectorSize, n+1, prefix, buffer + i * disc->udf_session->SectorSize, TagLocation + i, 1, &TagIdentifier))
 		{
 			break;
 		}
 #else
-		TagIdentifier = (buffer[i * MAXSECTORSIZE + 1] << 8) | buffer[i * SECTORSIZE + 0];
+		TagIdentifier = (buffer[i * disc->udf_session->SectorSize + 1] << 8) | buffer[i * disc->udf_session->SectorSize + 0];
 
 		N(n+1); printf ("%d.DescriptorTag.TagIdentifier:       %d - %s\n", i + 1, TagIdentifier, TagIdentifierName (TagIdentifier));
-		N(n+1); printf ("%d.DescriptorTag.DescriptorVersion:   %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 3]<<8) | buffer[i * SECTORSIZE + 2]);
-		N(n+1); printf ("%d.DescriptorTag.TagChecksum:         %d\n", i + 1, buffer[i * MAXSECTORSIZE + 4]);
-		//N(n+1); printf ("%d.DescriptorTag.Reserved:            %d\n", i + 1, buffer[i * MAXSECTORSIZE + 5]);
-		N(n+1); printf ("%d.DescriptorTag.TagSerialNumber:     %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 7]<<8) | buffer[i * SECTORSIZE + 6]);
-		N(n+1); printf ("%d.DescriptorTag.DescriptorCRC:       %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 9]<<8) | buffer[i * SECTORSIZE + 8]);
-		N(n+1); printf ("%d.DescriptorTag.DescriptorCRCLength: %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 11]<<8) | buffer[i * SECTORSIZE + 10]);
-		N(n+1); printf ("%d.DescriptorTag.TagLocation:         %d\n", i + 1, (buffer[i * MAXSECTORSIZE + 15]<<24) | (buffer[i * SECTORSIZE + 14]<<16) | (buffer[i * SECTORSIZE + 13]<<8) | buffer[i * SECTORSIZE + 12]);
+		N(n+1); printf ("%d.DescriptorTag.DescriptorVersion:   %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 3]<<8) | buffer[i * disc->udf_session->SectorSize + 2]);
+		N(n+1); printf ("%d.DescriptorTag.TagChecksum:         %d\n", i + 1, buffer[i * disc->udf_session->SectorSize + 4]);
+		//N(n+1); printf ("%d.DescriptorTag.Reserved:            %d\n", i + 1, buffer[i * disc->udf_session->SectorSize + 5]);
+		N(n+1); printf ("%d.DescriptorTag.TagSerialNumber:     %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 7]<<8) | buffer[i * disc->udf_session->SectorSize + 6]);
+		N(n+1); printf ("%d.DescriptorTag.DescriptorCRC:       %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 9]<<8) | buffer[i * disc->udf_session->SectorSize + 8]);
+		N(n+1); printf ("%d.DescriptorTag.DescriptorCRCLength: %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 11]<<8) | buffer[i * disc->udf_session->SectorSize + 10]);
+		N(n+1); printf ("%d.DescriptorTag.TagLocation:         %d\n", i + 1, (buffer[i * disc->udf_session->SectorSize + 15]<<24) | (buffer[i * disc->udf_session->SectorSize + 14]<<16) | (buffer[i * disc->udf_session->SectorSize + 13]<<8) | buffer[i * disc->udf_session->SectorSize + 12]);
 #endif
 
 		switch (TagIdentifier)
 		{
-			case 0x0008: TerminatingDescriptor (n + 2, disc, buffer + i * MAXSECTORSIZE); Terminated = 1; break;
-			case 0x0009: LogicalVolumeIntegrityDescriptor (n + 2, disc, buffer + i * MAXSECTORSIZE); break;
+			case 0x0008: TerminatingDescriptor (n + 2, disc, buffer + i * disc->udf_session->SectorSize); Terminated = 1; break;
+			case 0x0009: LogicalVolumeIntegrityDescriptor (n + 2, disc, buffer + i * disc->udf_session->SectorSize); break;
 			default:
 				printf ("Illegal sequence\n");
 				break;
@@ -3671,7 +3671,7 @@ static struct UDF_FS_DirectoryEntry_t *DirectoryDecoder2 (int n, const char *_pr
 		int padlength;
 
 		snprintf (prefix, sizeof (prefix), "%s%d.", _prefix, index);
-		if (print_tag_format (disc->udf_session->SectorSize, n+2, prefix, b, FE->FileAllocation[CFA_Index].ExtentLocation + (CFA_Offset / MAXSECTORSIZE) , 0, &TagIdentifier))
+		if (print_tag_format (disc->udf_session->SectorSize, n+2, prefix, b, FE->FileAllocation[CFA_Index].ExtentLocation + (CFA_Offset / disc->udf_session->SectorSize) , 0, &TagIdentifier))
 		{
 			break;
 		}
@@ -4118,7 +4118,7 @@ static void SequenceRawdisk (int n, struct cdfs_disc_t *disc, struct UDF_extent_
 		return;
 	}
 
-	buffer = calloc (1, (L->ExtentLength + MAXSECTORSIZE - 1) & ~(SECTORSIZE - 1));
+	buffer = calloc (1, (L->ExtentLength + disc->udf_session->SectorSize - 1) & ~(disc->udf_session->SectorSize - 1));
 	if (!buffer)
 	{
 		N(n); fprintf (stderr, "Warning - Failed to malloc buffer\n");
@@ -4127,7 +4127,7 @@ static void SequenceRawdisk (int n, struct cdfs_disc_t *disc, struct UDF_extent_
 
 	while (left)
 	{
-		if (get_absolute_sector (disc->udf_session->SectorSize, disc, L->ExtentLocation + pos, buffer + pos * MAXSECTORSIZE))
+		if (get_absolute_sector (disc->udf_session->SectorSize, disc, L->ExtentLocation + pos, buffer + pos * disc->udf_session->SectorSize))
 		{
 			N(n); fprintf (stderr, "Warning - Failed to fetch sector\n");
 			break;
@@ -5206,11 +5206,11 @@ static int Type2_Metadata_FetchSector (struct cdfs_disc_t *disc, struct UDF_Part
 	{
 		return -1;
 	}
-	if (sector >= (t->MetaSize / MAXSECTORSIZE))
+	if (sector >= (t->MetaSize / disc->udf_session->SectorSize))
 	{
 		return -1;
 	}
-	memcpy (buffer, t->MetaData + sector * MAXSECTORSIZE, SECTORSIZE);
+	memcpy (buffer, t->MetaData + sector * disc->udf_session->SectorSize, disc->udf_session->SectorSize);
 	return 0;
 }
 
@@ -5282,13 +5282,13 @@ static void UDF_Load_SparingTable (int n, struct cdfs_disc_t *disc, struct UDF_L
 		return;
 	}
 
-	for (i = 0; i * MAXSECTORSIZE < t->SizeOfEachSparingTable; i++)
+	for (i = 0; i * disc->udf_session->SectorSize < t->SizeOfEachSparingTable; i++)
 	{
 #if 0
 		This logic was wrong. Location is given in disk absolute, not partition we manage
-		if (t->PhysicalPartition->PartitionCommon.FetchSector (disc, &t->PhysicalPartition->PartitionCommon, buffer + i * MAXSECTORSIZE, Location + i))
+		if (t->PhysicalPartition->PartitionCommon.FetchSector (disc, &t->PhysicalPartition->PartitionCommon, buffer + i * disc->udf_session->SectorSize, Location + i))
 #else
-		if (get_absolute_sector (disc->udf_session->SectorSize, disc, Location + i, buffer + i * MAXSECTORSIZE))
+		if (get_absolute_sector (disc->udf_session->SectorSize, disc, Location + i, buffer + i * disc->udf_session->SectorSize))
 #endif
 		{
 			free (buffer);
